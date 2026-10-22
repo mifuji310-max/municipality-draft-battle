@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>市町村ドラフトバトル v0.4.2</title>
+<title>市町村ドラフトバトル v0.6.0</title>
 <style>
 :root{font-family:system-ui,'Noto Sans JP',sans-serif;background:#101b2b;color:#edf5ff}
 *{box-sizing:border-box}
@@ -35,26 +35,31 @@ canvas{width:100%;height:auto;display:block}
 .event{font-weight:800;color:#ffe0a1;font-size:clamp(16px,3.4vw,24px);text-align:center;min-height:32px;padding:8px}
 .controls{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:12px}
 .fine{font-size:12px;line-height:1.65;color:#a9bdcf}
-#picklist{max-height:390px;overflow:auto}
+#picklist{max-height:420px;overflow:auto}
 select,input{background:#21364d;color:white;border:1px solid #70869b;border-radius:8px;padding:10px;max-width:100%}
 .winner{font-size:34px;color:#f4d28e;text-align:center}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .stat{padding:10px;background:#263b52;border-radius:8px}
-.hidden{display:none!important}
 .hero{padding:35px 8px;text-align:center}
 .hero p{line-height:1.8}
 .chip{padding:5px 9px;border:1px solid #688096;border-radius:20px;font-size:13px}
+.chip.rival{display:inline-flex;align-items:center;gap:4px}
+.attr{display:inline-block;padding:1px 7px;border-radius:10px;font-size:12px;font-weight:700;color:#172438;white-space:nowrap}
+.attr-都会{background:#f2c26b}.attr-郊外{background:#9fd59a}.attr-田舎{background:#8fc7e8}
 .hudunit small{display:block;margin-top:5px;color:#edf5ff}
 .hudunit .role{color:#f0d28c}
 .hudunit .sh{color:#9cdeff}
 .konote{display:block;margin-top:6px;opacity:.68}
+.log{font-size:13px;line-height:1.7;color:#c9d8e6;margin:0;padding-left:18px}
 .mini{float:right;width:64px;height:64px;margin:-4px -4px 0 6px}
 .mini path,.chipsvg path,.big path{fill:#8acde0;stroke:#edf7ff;stroke-width:1.5;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .red path{fill:#eeaf96}
-.chipsvg{width:26px;height:26px;vertical-align:middle;margin-right:4px}
-.big{float:right;width:96px;height:96px}
-.chip.rival{display:inline-flex;align-items:center}
-.log{font-size:13px;line-height:1.7;color:#c9d8e6;margin:0;padding-left:18px}
+.chipsvg{width:26px;height:26px;vertical-align:middle}
+.big{float:right;width:86px;height:86px}
+.slotbtns{display:flex;gap:6px;margin-top:8px}
+.slotbtns button{flex:1;padding:8px}
+.slotbtns button.on{background:#e2bd77;color:#172438;font-weight:800;border-color:#e2bd77}
+.legend{font-size:13px;color:#c9d8e6}
 @media(max-width:600px){
   .wrap{padding:9px}.panel{padding:10px}.town{min-height:120px}
   .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -65,76 +70,78 @@ select,input{background:#21364d;color:white;border:1px solid #70869b;border-radi
 </head>
 <body>
 <div class="wrap">
-  <header><h1>市町村ドラフトバトル <small>福岡県</small></h1><span class="chip" id="verchip">β · 2対2</span></header>
+  <header><h1>市町村ドラフトバトル <small id="prefname"></small></h1><span class="chip" id="verchip">β · 2対2</span></header>
   <main id="app"></main>
-  <footer class="fine">実データ：福岡県60市町村の人口・高齢化率（2026年4月）、面積（2025年）。人口密度は異年次の概算。能力値・必殺技への変換はゲーム用の仮設定。輪郭：「国土数値情報（行政区域データ）」（国土交通省）を加工して作成（スマートニュース メディア研究所 japan-topography の簡素化版を利用。区は市単位に結合、遠い離島は近くに寄せて表示、大きさは面積を圧縮した目安）。産業・森林・鉄道データは未導入。参考サイト「地元の最強」の輪郭衝突という着想と、共有画像のJRPG風の奥行き表現を参考にした独立した試作。参考サイトのコード・素材は使用していません。</footer>
+  <footer class="fine">実データ：人口・年齢構成は総務省「住民基本台帳に基づく人口、人口動態及び世帯数」（2026年1月1日）、面積は国土地理院「全国都道府県市区町村別面積調」（2026年4月1日）。人口密度はこの2つから計算。属性（都会・郊外・田舎）は県内の人口密度の順位で3等分したもの。能力値・必殺技への変換はゲーム用の仮設定。輪郭：「国土数値情報（行政区域データ）」（国土交通省）を加工して作成（スマートニュース メディア研究所 japan-topography の簡素化版を利用。区は市単位に結合、遠い離島は近くに寄せて表示、大きさは面積を圧縮した目安）。参考サイト「地元の最強」の輪郭衝突という着想と、共有画像のJRPG風の奥行き表現を参考にした独立した試作。参考サイトのコード・素材は使用していません。</footer>
 </div>
 
 <!-- ===== 戦闘コア（DOMに依存しない。test.html からも読み込む） ===== -->
 <script id="core">
-const VERSION = 'v0.5.0';
+const VERSION = 'v0.6.0';
+const PREF_NAME = '福岡県';
 
+// 市町村データ：総務省 住民基本台帳（2026-01-01）＋国土地理院 面積（2026-04-01）。tools/pref_build.py で生成
 const DATA = [
-  {"code": "40100", "name": "北九州市", "population_2026_04_01": 900914, "age65plus_2026_04_01": 285837, "age75plus_2026_04_01": 172645, "elder_pct": 31.73, "age75_pct": 19.16, "age75_of65_pct": 60.4, "area_km2_2025": 492.5, "density_per_km2_mixed_year": 1829.27, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40130", "name": "福岡市", "population_2026_04_01": 1620631, "age65plus_2026_04_01": 363016, "age75plus_2026_04_01": 202659, "elder_pct": 22.4, "age75_pct": 12.5, "age75_of65_pct": 55.83, "area_km2_2025": 343.47, "density_per_km2_mixed_year": 4718.41, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40202", "name": "大牟田市", "population_2026_04_01": 102092, "age65plus_2026_04_01": 39491, "age75plus_2026_04_01": 23681, "elder_pct": 38.68, "age75_pct": 23.2, "age75_of65_pct": 59.97, "area_km2_2025": 81.45, "density_per_km2_mixed_year": 1253.43, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40203", "name": "久留米市", "population_2026_04_01": 298228, "age65plus_2026_04_01": 84862, "age75plus_2026_04_01": 48598, "elder_pct": 28.46, "age75_pct": 16.3, "age75_of65_pct": 57.27, "area_km2_2025": 229.96, "density_per_km2_mixed_year": 1296.87, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40204", "name": "直方市", "population_2026_04_01": 53960, "age65plus_2026_04_01": 17989, "age75plus_2026_04_01": 10851, "elder_pct": 33.34, "age75_pct": 20.11, "age75_of65_pct": 60.32, "area_km2_2025": 61.76, "density_per_km2_mixed_year": 873.7, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40205", "name": "飯塚市", "population_2026_04_01": 123098, "age65plus_2026_04_01": 39877, "age75plus_2026_04_01": 23194, "elder_pct": 32.39, "age75_pct": 18.84, "age75_of65_pct": 58.16, "area_km2_2025": 213.96, "density_per_km2_mixed_year": 575.33, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40206", "name": "田川市", "population_2026_04_01": 43738, "age65plus_2026_04_01": 15185, "age75plus_2026_04_01": 9031, "elder_pct": 34.72, "age75_pct": 20.65, "age75_of65_pct": 59.47, "area_km2_2025": 54.55, "density_per_km2_mixed_year": 801.8, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40207", "name": "柳川市", "population_2026_04_01": 60388, "age65plus_2026_04_01": 21477, "age75plus_2026_04_01": 12619, "elder_pct": 35.57, "age75_pct": 20.9, "age75_of65_pct": 58.76, "area_km2_2025": 77.15, "density_per_km2_mixed_year": 782.73, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40210", "name": "八女市", "population_2026_04_01": 58515, "age65plus_2026_04_01": 21731, "age75plus_2026_04_01": 12565, "elder_pct": 37.14, "age75_pct": 21.47, "age75_of65_pct": 57.82, "area_km2_2025": 482.44, "density_per_km2_mixed_year": 121.29, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40211", "name": "筑後市", "population_2026_04_01": 48755, "age65plus_2026_04_01": 13935, "age75plus_2026_04_01": 7857, "elder_pct": 28.58, "age75_pct": 16.12, "age75_of65_pct": 56.38, "area_km2_2025": 41.78, "density_per_km2_mixed_year": 1166.95, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40212", "name": "大川市", "population_2026_04_01": 30344, "age65plus_2026_04_01": 11323, "age75plus_2026_04_01": 6914, "elder_pct": 37.32, "age75_pct": 22.79, "age75_of65_pct": 61.06, "area_km2_2025": 33.62, "density_per_km2_mixed_year": 902.56, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40213", "name": "行橋市", "population_2026_04_01": 71607, "age65plus_2026_04_01": 21928, "age75plus_2026_04_01": 12880, "elder_pct": 30.62, "age75_pct": 17.99, "age75_of65_pct": 58.74, "area_km2_2025": 70.07, "density_per_km2_mixed_year": 1021.94, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40214", "name": "豊前市", "population_2026_04_01": 22800, "age65plus_2026_04_01": 8700, "age75plus_2026_04_01": 5309, "elder_pct": 38.16, "age75_pct": 23.29, "age75_of65_pct": 61.02, "area_km2_2025": 111.01, "density_per_km2_mixed_year": 205.39, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40215", "name": "中間市", "population_2026_04_01": 38486, "age65plus_2026_04_01": 14682, "age75plus_2026_04_01": 9130, "elder_pct": 38.15, "age75_pct": 23.72, "age75_of65_pct": 62.18, "area_km2_2025": 15.96, "density_per_km2_mixed_year": 2411.4, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40216", "name": "小郡市", "population_2026_04_01": 59412, "age65plus_2026_04_01": 17143, "age75plus_2026_04_01": 9901, "elder_pct": 28.85, "age75_pct": 16.66, "age75_of65_pct": 57.76, "area_km2_2025": 45.51, "density_per_km2_mixed_year": 1305.47, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40217", "name": "筑紫野市", "population_2026_04_01": 106388, "age65plus_2026_04_01": 28786, "age75plus_2026_04_01": 15651, "elder_pct": 27.06, "age75_pct": 14.71, "age75_of65_pct": 54.37, "area_km2_2025": 87.73, "density_per_km2_mixed_year": 1212.68, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40218", "name": "春日市", "population_2026_04_01": 111606, "age65plus_2026_04_01": 27157, "age75plus_2026_04_01": 14738, "elder_pct": 24.33, "age75_pct": 13.21, "age75_of65_pct": 54.27, "area_km2_2025": 14.15, "density_per_km2_mixed_year": 7887.35, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40219", "name": "大野城市", "population_2026_04_01": 103915, "age65plus_2026_04_01": 23587, "age75plus_2026_04_01": 13094, "elder_pct": 22.7, "age75_pct": 12.6, "age75_of65_pct": 55.51, "area_km2_2025": 26.89, "density_per_km2_mixed_year": 3864.45, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40220", "name": "宗像市", "population_2026_04_01": 96452, "age65plus_2026_04_01": 29831, "age75plus_2026_04_01": 16944, "elder_pct": 30.93, "age75_pct": 17.57, "age75_of65_pct": 56.8, "area_km2_2025": 119.94, "density_per_km2_mixed_year": 804.17, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40221", "name": "太宰府市", "population_2026_04_01": 71457, "age65plus_2026_04_01": 20102, "age75plus_2026_04_01": 12343, "elder_pct": 28.13, "age75_pct": 17.27, "age75_of65_pct": 61.4, "area_km2_2025": 29.6, "density_per_km2_mixed_year": 2414.09, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40223", "name": "古賀市", "population_2026_04_01": 58904, "age65plus_2026_04_01": 17228, "age75plus_2026_04_01": 9586, "elder_pct": 29.25, "age75_pct": 16.27, "age75_of65_pct": 55.64, "area_km2_2025": 42.07, "density_per_km2_mixed_year": 1400.14, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40224", "name": "福津市", "population_2026_04_01": 69528, "age65plus_2026_04_01": 18973, "age75plus_2026_04_01": 11175, "elder_pct": 27.29, "age75_pct": 16.07, "age75_of65_pct": 58.9, "area_km2_2025": 52.76, "density_per_km2_mixed_year": 1317.82, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40225", "name": "うきは市", "population_2026_04_01": 26710, "age65plus_2026_04_01": 9849, "age75plus_2026_04_01": 5773, "elder_pct": 36.87, "age75_pct": 21.61, "age75_of65_pct": 58.62, "area_km2_2025": 117.46, "density_per_km2_mixed_year": 227.4, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40226", "name": "宮若市", "population_2026_04_01": 25480, "age65plus_2026_04_01": 9305, "age75plus_2026_04_01": 5375, "elder_pct": 36.52, "age75_pct": 21.09, "age75_of65_pct": 57.76, "area_km2_2025": 139.99, "density_per_km2_mixed_year": 182.01, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40227", "name": "嘉麻市", "population_2026_04_01": 33078, "age65plus_2026_04_01": 13906, "age75plus_2026_04_01": 8165, "elder_pct": 42.04, "age75_pct": 24.68, "age75_of65_pct": 58.72, "area_km2_2025": 135.11, "density_per_km2_mixed_year": 244.82, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40228", "name": "朝倉市", "population_2026_04_01": 49278, "age65plus_2026_04_01": 17847, "age75plus_2026_04_01": 10368, "elder_pct": 36.22, "age75_pct": 21.04, "age75_of65_pct": 58.09, "area_km2_2025": 246.71, "density_per_km2_mixed_year": 199.74, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40229", "name": "みやま市", "population_2026_04_01": 33446, "age65plus_2026_04_01": 13428, "age75plus_2026_04_01": 7815, "elder_pct": 40.15, "age75_pct": 23.37, "age75_of65_pct": 58.2, "area_km2_2025": 105.21, "density_per_km2_mixed_year": 317.9, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40230", "name": "糸島市", "population_2026_04_01": 104030, "age65plus_2026_04_01": 31805, "age75plus_2026_04_01": 17755, "elder_pct": 30.57, "age75_pct": 17.07, "age75_of65_pct": 55.82, "area_km2_2025": 215.69, "density_per_km2_mixed_year": 482.31, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40231", "name": "那珂川市", "population_2026_04_01": 49170, "age65plus_2026_04_01": 12481, "age75plus_2026_04_01": 6963, "elder_pct": 25.38, "age75_pct": 14.16, "age75_of65_pct": 55.79, "area_km2_2025": 74.95, "density_per_km2_mixed_year": 656.04, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40341", "name": "宇美町", "population_2026_04_01": 36609, "age65plus_2026_04_01": 10914, "age75plus_2026_04_01": 5778, "elder_pct": 29.81, "age75_pct": 15.78, "age75_of65_pct": 52.94, "area_km2_2025": 30.21, "density_per_km2_mixed_year": 1211.82, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40342", "name": "篠栗町", "population_2026_04_01": 31211, "age65plus_2026_04_01": 7934, "age75plus_2026_04_01": 4520, "elder_pct": 25.42, "age75_pct": 14.48, "age75_of65_pct": 56.97, "area_km2_2025": 38.93, "density_per_km2_mixed_year": 801.72, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40343", "name": "志免町", "population_2026_04_01": 46203, "age65plus_2026_04_01": 11179, "age75plus_2026_04_01": 6597, "elder_pct": 24.2, "age75_pct": 14.28, "age75_of65_pct": 59.01, "area_km2_2025": 8.69, "density_per_km2_mixed_year": 5316.8, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40344", "name": "須恵町", "population_2026_04_01": 29842, "age65plus_2026_04_01": 7719, "age75plus_2026_04_01": 4636, "elder_pct": 25.87, "age75_pct": 15.54, "age75_of65_pct": 60.06, "area_km2_2025": 16.31, "density_per_km2_mixed_year": 1829.68, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40345", "name": "新宮町", "population_2026_04_01": 33227, "age65plus_2026_04_01": 6657, "age75plus_2026_04_01": 3493, "elder_pct": 20.03, "age75_pct": 10.51, "age75_of65_pct": 52.47, "area_km2_2025": 18.93, "density_per_km2_mixed_year": 1755.26, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40348", "name": "久山町", "population_2026_04_01": 9334, "age65plus_2026_04_01": 2511, "age75plus_2026_04_01": 1505, "elder_pct": 26.9, "age75_pct": 16.12, "age75_of65_pct": 59.94, "area_km2_2025": 37.44, "density_per_km2_mixed_year": 249.31, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40349", "name": "粕屋町", "population_2026_04_01": 48372, "age65plus_2026_04_01": 8870, "age75plus_2026_04_01": 4921, "elder_pct": 18.34, "age75_pct": 10.17, "age75_of65_pct": 55.48, "area_km2_2025": 14.13, "density_per_km2_mixed_year": 3423.35, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40381", "name": "芦屋町", "population_2026_04_01": 12399, "age65plus_2026_04_01": 4150, "age75plus_2026_04_01": 2557, "elder_pct": 33.47, "age75_pct": 20.62, "age75_of65_pct": 61.61, "area_km2_2025": 11.58, "density_per_km2_mixed_year": 1070.73, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40382", "name": "水巻町", "population_2026_04_01": 27353, "age65plus_2026_04_01": 9256, "age75plus_2026_04_01": 5339, "elder_pct": 33.84, "age75_pct": 19.52, "age75_of65_pct": 57.68, "area_km2_2025": 11.01, "density_per_km2_mixed_year": 2484.38, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40383", "name": "岡垣町", "population_2026_04_01": 31004, "age65plus_2026_04_01": 10409, "age75plus_2026_04_01": 6255, "elder_pct": 33.57, "age75_pct": 20.17, "age75_of65_pct": 60.09, "area_km2_2025": 48.64, "density_per_km2_mixed_year": 637.42, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40384", "name": "遠賀町", "population_2026_04_01": 18773, "age65plus_2026_04_01": 6629, "age75plus_2026_04_01": 3953, "elder_pct": 35.31, "age75_pct": 21.06, "age75_of65_pct": 59.63, "area_km2_2025": 22.15, "density_per_km2_mixed_year": 847.54, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40401", "name": "小竹町", "population_2026_04_01": 6745, "age65plus_2026_04_01": 2927, "age75plus_2026_04_01": 1796, "elder_pct": 43.4, "age75_pct": 26.63, "age75_of65_pct": 61.36, "area_km2_2025": 14.28, "density_per_km2_mixed_year": 472.34, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40402", "name": "鞍手町", "population_2026_04_01": 14546, "age65plus_2026_04_01": 5888, "age75plus_2026_04_01": 3547, "elder_pct": 40.48, "age75_pct": 24.38, "age75_of65_pct": 60.24, "area_km2_2025": 35.6, "density_per_km2_mixed_year": 408.6, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40421", "name": "桂川町", "population_2026_04_01": 12642, "age65plus_2026_04_01": 4621, "age75plus_2026_04_01": 2616, "elder_pct": 36.55, "age75_pct": 20.69, "age75_of65_pct": 56.61, "area_km2_2025": 20.14, "density_per_km2_mixed_year": 627.71, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40447", "name": "筑前町", "population_2026_04_01": 31025, "age65plus_2026_04_01": 9263, "age75plus_2026_04_01": 5255, "elder_pct": 29.86, "age75_pct": 16.94, "age75_of65_pct": 56.73, "area_km2_2025": 67.1, "density_per_km2_mixed_year": 462.37, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40448", "name": "東峰村", "population_2026_04_01": 1716, "age65plus_2026_04_01": 835, "age75plus_2026_04_01": 470, "elder_pct": 48.66, "age75_pct": 27.39, "age75_of65_pct": 56.29, "area_km2_2025": 51.97, "density_per_km2_mixed_year": 33.02, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40503", "name": "大刀洗町", "population_2026_04_01": 16210, "age65plus_2026_04_01": 4557, "age75plus_2026_04_01": 2567, "elder_pct": 28.11, "age75_pct": 15.84, "age75_of65_pct": 56.33, "area_km2_2025": 22.84, "density_per_km2_mixed_year": 709.72, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40522", "name": "大木町", "population_2026_04_01": 13500, "age65plus_2026_04_01": 4090, "age75plus_2026_04_01": 2322, "elder_pct": 30.3, "age75_pct": 17.2, "age75_of65_pct": 56.77, "area_km2_2025": 18.44, "density_per_km2_mixed_year": 732.1, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40544", "name": "広川町", "population_2026_04_01": 18989, "age65plus_2026_04_01": 5785, "age75plus_2026_04_01": 3265, "elder_pct": 30.47, "age75_pct": 17.19, "age75_of65_pct": 56.44, "area_km2_2025": 37.94, "density_per_km2_mixed_year": 500.5, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40601", "name": "香春町", "population_2026_04_01": 9772, "age65plus_2026_04_01": 4200, "age75plus_2026_04_01": 2550, "elder_pct": 42.98, "age75_pct": 26.09, "age75_of65_pct": 60.71, "area_km2_2025": 44.5, "density_per_km2_mixed_year": 219.6, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40602", "name": "添田町", "population_2026_04_01": 8029, "age65plus_2026_04_01": 3720, "age75plus_2026_04_01": 2236, "elder_pct": 46.33, "age75_pct": 27.85, "age75_of65_pct": 60.11, "area_km2_2025": 132.2, "density_per_km2_mixed_year": 60.73, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40604", "name": "糸田町", "population_2026_04_01": 8077, "age65plus_2026_04_01": 3123, "age75plus_2026_04_01": 1852, "elder_pct": 38.67, "age75_pct": 22.93, "age75_of65_pct": 59.3, "area_km2_2025": 8.04, "density_per_km2_mixed_year": 1004.6, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40605", "name": "川崎町", "population_2026_04_01": 14388, "age65plus_2026_04_01": 5875, "age75plus_2026_04_01": 3408, "elder_pct": 40.83, "age75_pct": 23.69, "age75_of65_pct": 58.01, "area_km2_2025": 36.14, "density_per_km2_mixed_year": 398.12, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40608", "name": "大任町", "population_2026_04_01": 4928, "age65plus_2026_04_01": 1855, "age75plus_2026_04_01": 1124, "elder_pct": 37.64, "age75_pct": 22.81, "age75_of65_pct": 60.59, "area_km2_2025": 14.26, "density_per_km2_mixed_year": 345.58, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40609", "name": "赤村", "population_2026_04_01": 2710, "age65plus_2026_04_01": 1149, "age75plus_2026_04_01": 648, "elder_pct": 42.4, "age75_pct": 23.91, "age75_of65_pct": 56.4, "area_km2_2025": 31.98, "density_per_km2_mixed_year": 84.74, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40610", "name": "福智町", "population_2026_04_01": 20471, "age65plus_2026_04_01": 7614, "age75plus_2026_04_01": 4422, "elder_pct": 37.19, "age75_pct": 21.6, "age75_of65_pct": 58.08, "area_km2_2025": 42.06, "density_per_km2_mixed_year": 486.71, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40621", "name": "苅田町", "population_2026_04_01": 37350, "age65plus_2026_04_01": 9596, "age75plus_2026_04_01": 5416, "elder_pct": 25.69, "age75_pct": 14.5, "age75_of65_pct": 56.44, "area_km2_2025": 49.58, "density_per_km2_mixed_year": 753.33, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40625", "name": "みやこ町", "population_2026_04_01": 17189, "age65plus_2026_04_01": 7420, "age75plus_2026_04_01": 4592, "elder_pct": 43.17, "age75_pct": 26.71, "age75_of65_pct": 61.89, "area_km2_2025": 151.34, "density_per_km2_mixed_year": 113.58, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40642", "name": "吉富町", "population_2026_04_01": 6497, "age65plus_2026_04_01": 2037, "age75plus_2026_04_01": 1266, "elder_pct": 31.35, "age75_pct": 19.49, "age75_of65_pct": 62.15, "area_km2_2025": 5.72, "density_per_km2_mixed_year": 1135.84, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40646", "name": "上毛町", "population_2026_04_01": 7038, "age65plus_2026_04_01": 2637, "age75plus_2026_04_01": 1536, "elder_pct": 37.47, "age75_pct": 21.82, "age75_of65_pct": 58.25, "area_km2_2025": 62.44, "density_per_km2_mixed_year": 112.72, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"},
-  {"code": "40647", "name": "築上町", "population_2026_04_01": 15806, "age65plus_2026_04_01": 6305, "age75plus_2026_04_01": 3941, "elder_pct": 39.89, "age75_pct": 24.93, "age75_of65_pct": 62.51, "area_km2_2025": 119.61, "density_per_km2_mixed_year": 132.15, "source_population": "FukuokaPref-elderly-2026-04-01", "source_area": "GSI-municipal-area-2025-via-teikokushoin"}
+  {"code": "40100", "name": "北九州市", "population": 905635, "young_pct": 11.24, "work_pct": 57.15, "elder_pct": 31.6, "age75_pct": 18.94, "age75_of65_pct": 59.93, "area_km2": 492.3, "density": 1839.6},
+  {"code": "40130", "name": "福岡市", "population": 1620853, "young_pct": 12.36, "work_pct": 65.29, "elder_pct": 22.35, "age75_pct": 12.39, "age75_of65_pct": 55.43, "area_km2": 343.47, "density": 4719.05},
+  {"code": "40202", "name": "大牟田市", "population": 102782, "young_pct": 10.21, "work_pct": 51.29, "elder_pct": 38.5, "age75_pct": 22.86, "age75_of65_pct": 59.37, "area_km2": 81.45, "density": 1261.9},
+  {"code": "40203", "name": "久留米市", "population": 299047, "young_pct": 12.97, "work_pct": 58.65, "elder_pct": 28.39, "age75_pct": 16.12, "age75_of65_pct": 56.8, "area_km2": 229.96, "density": 1300.43},
+  {"code": "40204", "name": "直方市", "population": 54154, "young_pct": 12.01, "work_pct": 54.65, "elder_pct": 33.34, "age75_pct": 19.93, "age75_of65_pct": 59.78, "area_km2": 61.76, "density": 876.85},
+  {"code": "40205", "name": "飯塚市", "population": 123413, "young_pct": 12.21, "work_pct": 55.45, "elder_pct": 32.34, "age75_pct": 18.59, "age75_of65_pct": 57.48, "area_km2": 213.96, "density": 576.8},
+  {"code": "40206", "name": "田川市", "population": 44065, "young_pct": 11.53, "work_pct": 53.88, "elder_pct": 34.59, "age75_pct": 20.37, "age75_of65_pct": 58.89, "area_km2": 54.55, "density": 807.79},
+  {"code": "40207", "name": "柳川市", "population": 60734, "young_pct": 10.92, "work_pct": 53.64, "elder_pct": 35.45, "age75_pct": 20.63, "age75_of65_pct": 58.19, "area_km2": 77.15, "density": 787.22},
+  {"code": "40210", "name": "八女市", "population": 58877, "young_pct": 11.29, "work_pct": 51.73, "elder_pct": 36.98, "age75_pct": 21.25, "age75_of65_pct": 57.46, "area_km2": 482.44, "density": 122.04},
+  {"code": "40211", "name": "筑後市", "population": 48894, "young_pct": 13.78, "work_pct": 57.69, "elder_pct": 28.53, "age75_pct": 16.04, "age75_of65_pct": 56.24, "area_km2": 41.78, "density": 1170.27},
+  {"code": "40212", "name": "大川市", "population": 30531, "young_pct": 9.78, "work_pct": 53.01, "elder_pct": 37.2, "age75_pct": 22.53, "age75_of65_pct": 60.57, "area_km2": 33.62, "density": 908.12},
+  {"code": "40213", "name": "行橋市", "population": 71813, "young_pct": 12.49, "work_pct": 56.96, "elder_pct": 30.55, "age75_pct": 17.74, "age75_of65_pct": 58.08, "area_km2": 69.95, "density": 1026.63},
+  {"code": "40214", "name": "豊前市", "population": 22956, "young_pct": 10.24, "work_pct": 51.76, "elder_pct": 38.01, "age75_pct": 22.98, "age75_of65_pct": 60.47, "area_km2": 111.01, "density": 206.79},
+  {"code": "40215", "name": "中間市", "population": 38626, "young_pct": 10.31, "work_pct": 51.48, "elder_pct": 38.21, "age75_pct": 23.63, "age75_of65_pct": 61.85, "area_km2": 15.96, "density": 2420.18},
+  {"code": "40216", "name": "小郡市", "population": 59685, "young_pct": 13.06, "work_pct": 58.26, "elder_pct": 28.68, "age75_pct": 16.48, "age75_of65_pct": 57.47, "area_km2": 45.51, "density": 1311.47},
+  {"code": "40217", "name": "筑紫野市", "population": 106390, "young_pct": 13.56, "work_pct": 59.5, "elder_pct": 26.94, "age75_pct": 14.52, "age75_of65_pct": 53.88, "area_km2": 87.73, "density": 1212.7},
+  {"code": "40218", "name": "春日市", "population": 111754, "young_pct": 13.77, "work_pct": 62.02, "elder_pct": 24.21, "age75_pct": 13.03, "age75_of65_pct": 53.84, "area_km2": 14.15, "density": 7897.81},
+  {"code": "40219", "name": "大野城市", "population": 104025, "young_pct": 14.89, "work_pct": 62.53, "elder_pct": 22.58, "age75_pct": 12.46, "age75_of65_pct": 55.2, "area_km2": 26.89, "density": 3868.54},
+  {"code": "40220", "name": "宗像市", "population": 96765, "young_pct": 13.24, "work_pct": 55.91, "elder_pct": 30.85, "age75_pct": 17.38, "age75_of65_pct": 56.32, "area_km2": 119.94, "density": 806.78},
+  {"code": "40221", "name": "太宰府市", "population": 71580, "young_pct": 13.18, "work_pct": 58.69, "elder_pct": 28.13, "age75_pct": 17.16, "age75_of65_pct": 60.99, "area_km2": 29.6, "density": 2418.24},
+  {"code": "40223", "name": "古賀市", "population": 58957, "young_pct": 13.26, "work_pct": 57.56, "elder_pct": 29.18, "age75_pct": 16.1, "age75_of65_pct": 55.16, "area_km2": 42.07, "density": 1401.4},
+  {"code": "40224", "name": "福津市", "population": 69535, "young_pct": 16.48, "work_pct": 56.26, "elder_pct": 27.26, "age75_pct": 15.92, "age75_of65_pct": 58.39, "area_km2": 52.76, "density": 1317.95},
+  {"code": "40225", "name": "うきは市", "population": 26915, "young_pct": 11.17, "work_pct": 52.13, "elder_pct": 36.7, "age75_pct": 21.34, "age75_of65_pct": 58.16, "area_km2": 117.46, "density": 229.14},
+  {"code": "40226", "name": "宮若市", "population": 25563, "young_pct": 10.83, "work_pct": 52.74, "elder_pct": 36.43, "age75_pct": 20.92, "age75_of65_pct": 57.43, "area_km2": 139.99, "density": 182.61},
+  {"code": "40227", "name": "嘉麻市", "population": 33355, "young_pct": 10.08, "work_pct": 48.16, "elder_pct": 41.76, "age75_pct": 24.27, "age75_of65_pct": 58.12, "area_km2": 135.11, "density": 246.87},
+  {"code": "40228", "name": "朝倉市", "population": 49510, "young_pct": 11.12, "work_pct": 52.75, "elder_pct": 36.13, "age75_pct": 20.82, "age75_of65_pct": 57.61, "area_km2": 246.71, "density": 200.68},
+  {"code": "40229", "name": "みやま市", "population": 33609, "young_pct": 10.14, "work_pct": 49.75, "elder_pct": 40.12, "age75_pct": 23.15, "age75_of65_pct": 57.7, "area_km2": 105.21, "density": 319.45},
+  {"code": "40230", "name": "糸島市", "population": 104141, "young_pct": 13.46, "work_pct": 56.07, "elder_pct": 30.48, "age75_pct": 16.89, "age75_of65_pct": 55.43, "area_km2": 215.69, "density": 482.83},
+  {"code": "40231", "name": "那珂川市", "population": 49221, "young_pct": 14.03, "work_pct": 60.66, "elder_pct": 25.31, "age75_pct": 13.94, "age75_of65_pct": 55.06, "area_km2": 74.95, "density": 656.72},
+  {"code": "40341", "name": "宇美町", "population": 36722, "young_pct": 13.5, "work_pct": 56.8, "elder_pct": 29.7, "age75_pct": 15.45, "age75_of65_pct": 52.0, "area_km2": 30.21, "density": 1215.56},
+  {"code": "40342", "name": "篠栗町", "population": 31274, "young_pct": 13.72, "work_pct": 61.06, "elder_pct": 25.22, "age75_pct": 14.25, "age75_of65_pct": 56.51, "area_km2": 38.93, "density": 803.34},
+  {"code": "40343", "name": "志免町", "population": 46274, "young_pct": 14.17, "work_pct": 61.7, "elder_pct": 24.13, "age75_pct": 14.09, "age75_of65_pct": 58.39, "area_km2": 8.69, "density": 5324.97},
+  {"code": "40344", "name": "須恵町", "population": 29748, "young_pct": 15.63, "work_pct": 58.37, "elder_pct": 26.01, "age75_pct": 15.5, "age75_of65_pct": 59.59, "area_km2": 16.31, "density": 1823.91},
+  {"code": "40345", "name": "新宮町", "population": 33176, "young_pct": 16.87, "work_pct": 63.2, "elder_pct": 19.93, "age75_pct": 10.37, "age75_of65_pct": 52.03, "area_km2": 18.93, "density": 1752.56},
+  {"code": "40348", "name": "久山町", "population": 9354, "young_pct": 16.36, "work_pct": 56.8, "elder_pct": 26.84, "age75_pct": 15.98, "age75_of65_pct": 59.54, "area_km2": 37.44, "density": 249.84},
+  {"code": "40349", "name": "粕屋町", "population": 48404, "young_pct": 15.24, "work_pct": 66.5, "elder_pct": 18.27, "age75_pct": 10.02, "age75_of65_pct": 54.88, "area_km2": 14.13, "density": 3425.62},
+  {"code": "40381", "name": "芦屋町", "population": 12486, "young_pct": 11.51, "work_pct": 55.25, "elder_pct": 33.25, "age75_pct": 20.3, "age75_of65_pct": 61.07, "area_km2": 11.58, "density": 1078.24},
+  {"code": "40382", "name": "水巻町", "population": 27398, "young_pct": 12.18, "work_pct": 54.11, "elder_pct": 33.72, "age75_pct": 19.24, "age75_of65_pct": 57.07, "area_km2": 11.01, "density": 2488.47},
+  {"code": "40383", "name": "岡垣町", "population": 31081, "young_pct": 12.42, "work_pct": 54.01, "elder_pct": 33.58, "age75_pct": 20.02, "age75_of65_pct": 59.62, "area_km2": 48.64, "density": 639.0},
+  {"code": "40384", "name": "遠賀町", "population": 18807, "young_pct": 11.82, "work_pct": 52.87, "elder_pct": 35.31, "age75_pct": 20.79, "age75_of65_pct": 58.89, "area_km2": 22.15, "density": 849.07},
+  {"code": "40401", "name": "小竹町", "population": 6798, "young_pct": 7.28, "work_pct": 49.41, "elder_pct": 43.31, "age75_pct": 26.51, "age75_of65_pct": 61.21, "area_km2": 14.28, "density": 476.05},
+  {"code": "40402", "name": "鞍手町", "population": 14591, "young_pct": 9.88, "work_pct": 49.74, "elder_pct": 40.38, "age75_pct": 23.95, "age75_of65_pct": 59.3, "area_km2": 35.6, "density": 409.86},
+  {"code": "40421", "name": "桂川町", "population": 12669, "young_pct": 11.18, "work_pct": 52.35, "elder_pct": 36.47, "age75_pct": 20.27, "age75_of65_pct": 55.58, "area_km2": 20.14, "density": 629.05},
+  {"code": "40447", "name": "筑前町", "population": 30993, "young_pct": 14.17, "work_pct": 55.94, "elder_pct": 29.89, "age75_pct": 16.7, "age75_of65_pct": 55.88, "area_km2": 67.1, "density": 461.89},
+  {"code": "40448", "name": "東峰村", "population": 1721, "young_pct": 8.66, "work_pct": 42.71, "elder_pct": 48.63, "age75_pct": 27.31, "age75_of65_pct": 56.15, "area_km2": 51.97, "density": 33.12},
+  {"code": "40503", "name": "大刀洗町", "population": 16170, "young_pct": 14.93, "work_pct": 56.9, "elder_pct": 28.18, "age75_pct": 15.78, "age75_of65_pct": 56.01, "area_km2": 22.84, "density": 707.97},
+  {"code": "40522", "name": "大木町", "population": 13549, "young_pct": 13.41, "work_pct": 56.35, "elder_pct": 30.24, "age75_pct": 16.94, "age75_of65_pct": 56.02, "area_km2": 18.44, "density": 734.76},
+  {"code": "40544", "name": "広川町", "population": 19051, "young_pct": 12.75, "work_pct": 56.84, "elder_pct": 30.41, "age75_pct": 17.0, "age75_of65_pct": 55.91, "area_km2": 37.94, "density": 502.13},
+  {"code": "40601", "name": "香春町", "population": 9808, "young_pct": 10.13, "work_pct": 46.96, "elder_pct": 42.9, "age75_pct": 25.67, "age75_of65_pct": 59.84, "area_km2": 44.5, "density": 220.4},
+  {"code": "40602", "name": "添田町", "population": 8086, "young_pct": 7.99, "work_pct": 45.91, "elder_pct": 46.1, "age75_pct": 27.42, "age75_of65_pct": 59.47, "area_km2": 132.2, "density": 61.16},
+  {"code": "40604", "name": "糸田町", "population": 8120, "young_pct": 11.56, "work_pct": 49.99, "elder_pct": 38.45, "age75_pct": 22.7, "age75_of65_pct": 59.03, "area_km2": 8.04, "density": 1009.95},
+  {"code": "40605", "name": "川崎町", "population": 14499, "young_pct": 10.0, "work_pct": 49.48, "elder_pct": 40.52, "age75_pct": 23.25, "age75_of65_pct": 57.38, "area_km2": 36.14, "density": 401.19},
+  {"code": "40608", "name": "大任町", "population": 4948, "young_pct": 13.99, "work_pct": 48.59, "elder_pct": 37.43, "age75_pct": 22.23, "age75_of65_pct": 59.4, "area_km2": 14.26, "density": 346.98},
+  {"code": "40609", "name": "赤村", "population": 2754, "young_pct": 11.51, "work_pct": 46.37, "elder_pct": 42.12, "age75_pct": 23.78, "age75_of65_pct": 56.47, "area_km2": 31.98, "density": 86.12},
+  {"code": "40610", "name": "福智町", "population": 20589, "young_pct": 11.65, "work_pct": 51.31, "elder_pct": 37.03, "age75_pct": 21.2, "age75_of65_pct": 57.25, "area_km2": 42.06, "density": 489.51},
+  {"code": "40621", "name": "苅田町", "population": 37447, "young_pct": 13.31, "work_pct": 61.13, "elder_pct": 25.56, "age75_pct": 14.28, "age75_of65_pct": 55.86, "area_km2": 49.52, "density": 756.2},
+  {"code": "40625", "name": "みやこ町", "population": 17339, "young_pct": 9.25, "work_pct": 47.7, "elder_pct": 43.05, "age75_pct": 26.4, "age75_of65_pct": 61.33, "area_km2": 151.34, "density": 114.57},
+  {"code": "40642", "name": "吉富町", "population": 6467, "young_pct": 12.68, "work_pct": 55.91, "elder_pct": 31.41, "age75_pct": 19.25, "age75_of65_pct": 61.3, "area_km2": 5.73, "density": 1128.62},
+  {"code": "40646", "name": "上毛町", "population": 7077, "young_pct": 12.31, "work_pct": 50.29, "elder_pct": 37.4, "age75_pct": 21.52, "age75_of65_pct": 57.54, "area_km2": 62.44, "density": 113.34},
+  {"code": "40647", "name": "築上町", "population": 16071, "young_pct": 9.31, "work_pct": 51.32, "elder_pct": 39.37, "age75_pct": 24.29, "age75_of65_pct": 61.7, "area_km2": 119.57, "density": 134.41}
 ];
 
 // 市町村の形：出典 国土交通省 国土数値情報（行政区域データ）を加工（smartnews-smri/japan-topography 簡素化1%版）
@@ -215,28 +222,52 @@ const TICK_LIMIT = 50 * TPS;    // 50ゲーム秒
 const SHIELD_BASE = 23;
 const SHIELD_TICKS = 8 * TPS;   // シールド有効期限 8ゲーム秒
 
-// 1000×560 座標系の論理配置
-const POS = {
-  blue: { front: { x: 335, y: 430, scale: 1.15 }, rear: { x: 155, y: 257, scale: .79 } },
-  red:  { front: { x: 665, y: 430, scale: 1.15 }, rear: { x: 845, y: 257, scale: .79 } }
+// 配置：自治体A＝奥の段(far)、自治体B＝手前の段(near)。それぞれ前衛(front)か後衛(rear)を選ぶ
+const ROWS = ['far', 'near'];
+const BASE_POS = {
+  far:  { rear: { x: 150, y: 270, scale: .85 }, front: { x: 320, y: 270, scale: .85 } },
+  near: { rear: { x: 130, y: 440, scale: 1.15 }, front: { x: 330, y: 440, scale: 1.15 } }
 };
+const POS = {};
+for (const side of ['blue', 'red']) {
+  POS[side] = {};
+  for (const row of ROWS) {
+    POS[side][row] = {};
+    for (const slot of ['front', 'rear']) {
+      const p = BASE_POS[row][slot];
+      POS[side][row][slot] = { x: side === 'blue' ? p.x : 1000 - p.x, y: p.y, scale: p.scale };
+    }
+  }
+}
+const posOf = u => ({ ...POS[u.side][u.row][u.slot] });
 
-// 技は表示名ではなく id と attackStyle で識別する（F07）
+// 狙われやすさ（前衛を優先するが確定ではない）と、後衛の通常攻撃の威力
+const TARGET_WEIGHT = { front: 7, rear: 3 };
+const REAR_BASIC_MUL = .8;
+
+// 三すくみ：都会 → 郊外 → 田舎 → 都会（矢印の先に強い）
+const ATTRS = ['都会', '郊外', '田舎'];
+const ATTR_ICON = { '都会': '🏙', '郊外': '🏡', '田舎': '🌾' };
+const BEATS = { '都会': '郊外', '郊外': '田舎', '田舎': '都会' };
+const ADV_MUL = 1.3, DIS_MUL = .8;
+function affinity(a, t) { return BEATS[a] === t ? 'adv' : BEATS[t] === a ? 'dis' : null; }
+const affinityMul = aff => aff === 'adv' ? ADV_MUL : aff === 'dis' ? DIS_MUL : 1;
+
+// 技は表示名ではなく id と attackStyle で識別する
 const SKILLS = {
-  elder:    { id: 'elder_magic',       displayName: '長老の大魔法',     attackStyle: 'magic',   effectKind: 'damage', statBasis: 'elder_pct', stat: 'mag', mul: 1.9 },
-  dense:    { id: 'density_rush',      displayName: '人口密集ラッシュ', attackStyle: 'melee',   effectKind: 'damage', statBasis: 'density',   stat: 'atk', mul: 1.65 },
-  wide:     { id: 'wide_guard',        displayName: '広域防衛線',       attackStyle: 'support', effectKind: 'shield', statBasis: 'area' },
-  care:     { id: 'generation_wisdom', displayName: '世代の知恵',       attackStyle: 'support', effectKind: 'heal',   statBasis: 'age75_pct' },
-  balanced: { id: 'town_power',        displayName: 'まちの底力',       attackStyle: 'melee',   effectKind: 'damage', statBasis: 'temporary', stat: 'atk', mul: 1.65 }
+  elder:    { id: 'elder_magic',       displayName: '長老の大魔法',     attackStyle: 'magic',   effectKind: 'damage', stat: 'mag', mul: 1.9 },
+  dense:    { id: 'density_rush',      displayName: '人口密集ラッシュ', attackStyle: 'melee',   effectKind: 'damage', stat: 'atk', mul: 1.65 },
+  wide:     { id: 'wide_guard',        displayName: '広域防衛線',       attackStyle: 'support', effectKind: 'shield' },
+  care:     { id: 'generation_wisdom', displayName: '世代の知恵',       attackStyle: 'support', effectKind: 'heal' },
+  balanced: { id: 'town_power',        displayName: 'まちの底力',       attackStyle: 'melee',   effectKind: 'damage', stat: 'atk', mul: 1.65 }
 };
 const SKILLS_BY_ID = Object.fromEntries(Object.values(SKILLS).map(s => [s.id, s]));
 
-// HTMLエスケープ（F08）
+// HTMLエスケープ
 const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 function esc(s) { return String(s).replace(/[&<>"']/g, c => HTML_ESCAPES[c]); }
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const posOf = (side, role) => ({ ...POS[side][role] });
 
 // 戦闘用のシード付き乱数（ドラフト抽選の Math.random とは別物）
 function rng(s) {
@@ -257,7 +288,7 @@ function shuffleWith(a, rand = Math.random) {
 }
 
 function unit(d) {
-  const e = d.elder_pct, den = d.density_per_km2_mixed_year, area = d.area_km2_2025, p = d.population_2026_04_01;
+  const e = d.elder_pct, den = d.density, area = d.area_km2, p = d.population;
   const type = e >= 38 ? 'elder' : den >= 2500 ? 'dense' : area >= 180 ? 'wide' : d.age75_pct >= 19 ? 'care' : 'balanced';
   const st = {
     hp:  Math.round(clamp(98 + (area > 180 ? 13 : 0) + (e > 37 ? 7 : 0), 82, 126)),
@@ -266,13 +297,20 @@ function unit(d) {
     spd: Math.round(clamp(97 + Math.log10(Math.max(10, den) / 450) * 11, 78, 122)),
     mag: Math.round(clamp(92 + (e - 27) * 1.5, 75, 126))
   };
-  return { ...d, type, skillId: SKILLS[type].id, st, shape: SHAPES[d.code], size: sizeOf(d.area_km2_2025) };
+  return { ...d, type, skillId: SKILLS[type].id, st, shape: SHAPES[d.code], size: sizeOf(area) };
 }
 
 // 見た目の大きさ係数：面積の対数で 0.72〜1.32 に圧縮（厳密な比率ではない）
 const AREA_MIN = 5.72, AREA_MAX = 492.5;
 function sizeOf(area) {
   return +(.72 + .6 * clamp(Math.log(area / AREA_MIN) / Math.log(AREA_MAX / AREA_MIN), 0, 1)).toFixed(3);
+}
+
+// 属性：県内の人口密度の順位で3等分（どの県でも1/3ずつになる）
+function assignAttrs(list) {
+  const asc = [...list].sort((a, b) => a.density - b.density), n = asc.length;
+  asc.forEach((u, i) => { u.attr = i < n / 3 ? '田舎' : i < 2 * n / 3 ? '郊外' : '都会'; u.densityRank = n - i; });
+  return list;
 }
 
 // カード用の小さな形（SVG）
@@ -286,44 +324,47 @@ function shapeSvg(u, cls = 'mini') {
 }
 const skillName = u => SKILLS_BY_ID[u.skillId].displayName;
 
-const ALL = DATA.map(unit);
+const ALL = assignAttrs(DATA.map(unit));
 
 const isAlive = u => u.hp > 0;
 const shieldCap = u => Math.min(35, Math.round(u.maxHp * .3));
 
-// 現在の役割：元前衛は常に front。元後衛は、味方の元前衛が倒れていれば front
-function effectiveRole(u, b) {
-  if (u.initialSlot === 'front') return 'front';
-  const mate = b.units.find(v => v.side === u.side && v !== u);
-  return mate && isAlive(mate) ? 'rear' : 'front';
-}
-
-// 通常攻撃：ATK参照／魔法：MAG参照（F10）
+// 通常攻撃：ATK参照／魔法：MAG参照。mul には技倍率・後衛補正・相性をまとめて渡す
 function calcDamage(power, def, mul, r) {
   return Math.max(1, Math.round(16 * mul * Math.pow(power / 100, .8) * Math.pow(100 / def, .6) * (.95 + r * .1)));
 }
 
+// blue / red は [{d, slot}, {d, slot}]（0番目が奥の段A、1番目が手前の段B）
 function createBattle(blue, red, seed) {
-  const defs = [[blue[0], 'blue', 'front'], [blue[1], 'blue', 'rear'], [red[0], 'red', 'front'], [red[1], 'red', 'rear']];
-  return {
-    version: VERSION, seed, r: seed >>> 0, tick: 0,
-    units: defs.map(([d, side, initialSlot]) => ({
-      id: side + '-' + initialSlot, d, side, initialSlot,
+  const units = [];
+  for (const [side, team] of [['blue', blue], ['red', red]]) {
+    team.forEach(({ d, slot }, i) => units.push({
+      id: side + '-' + ROWS[i], d, side, row: ROWS[i], slot,
       hp: d.st.hp, maxHp: d.st.hp, atb: 0, sp: 0, shield: null,
-      koTick: null, promotedAtTick: null, dealt: 0, healed: 0, shielded: 0
-    })),
-    log: [], nextEventId: 1, done: false, winner: null, phase: 'RUNNING', endTick: null
-  };
+      koTick: null, dealt: 0, healed: 0, shielded: 0
+    }));
+  }
+  return { version: VERSION, seed, r: seed >>> 0, tick: 0, units, log: [], nextEventId: 1, done: false, winner: null, phase: 'RUNNING', endTick: null };
 }
 
 const unitById = (b, id) => b.units.find(u => u.id === id);
 
 // tick開始時点のスナップショット
 function snapshotStart(b) {
-  return new Map(b.units.map(u => [u, { alive: isAlive(u), role: effectiveRole(u, b) }]));
+  return new Map(b.units.map(u => [u, { alive: isAlive(u) }]));
 }
-function frontAtStart(b, side, start) {
-  return b.units.find(u => u.side === side && start.get(u).alive && start.get(u).role === 'front') || null;
+
+// 狙う相手：前衛7・後衛3の重みで抽選（シード付き乱数）
+function pickTarget(b, enemies) {
+  if (enemies.length === 1) return enemies[0];
+  const ws = enemies.map(v => TARGET_WEIGHT[v.slot]);
+  let x = rng(b) * ws.reduce((s, w) => s + w, 0);
+  for (let i = 0; i < enemies.length; i++) { x -= ws[i]; if (x < 0) return enemies[i]; }
+  return enemies[enemies.length - 1];
+}
+// HPの割合が一番低い味方（同じなら奥の段を優先）
+function weakestAlly(b, side, start) {
+  return b.units.filter(v => v.side === side && start.get(v).alive).reduce((a, c) => a.hp / a.maxHp <= c.hp / c.maxHp ? a : c);
 }
 
 function pushEvent(b, ev) {
@@ -333,13 +374,13 @@ function pushEvent(b, ev) {
   return ev;
 }
 
-// 1tick分の処理（仕様書 3.1 の順番）
+// 1tick分の処理
 function stepBattle(b) {
   if (b.done) return [];
   b.tick++;
   const t = b.tick, from = b.log.length;
 
-  // 2. 期限切れシールドの除去
+  // 期限切れシールドの除去
   for (const u of b.units) {
     if (isAlive(u) && u.shield && u.shield.expiresAtTick <= t) {
       u.shield = null;
@@ -347,10 +388,9 @@ function stepBattle(b) {
     }
   }
 
-  // 1. 開始スナップショット
   const start = snapshotStart(b);
 
-  // 3. ATB更新・行動決定（開始時に生存していたユニットのみ）
+  // ATB更新・行動決定（開始時に生存していたユニットのみ）
   const actions = [];
   for (const u of b.units) {
     if (!start.get(u).alive) continue;
@@ -360,41 +400,38 @@ function stepBattle(b) {
     const skill = SKILLS_BY_ID[u.d.skillId];
     let special = u.sp >= 100;
     if (special && skill.effectKind === 'shield') {
-      // 盾が十分残っているなら無駄打ちせず、SPを保持して通常攻撃（F05）
-      const rc = frontAtStart(b, u.side, start);
-      if (!rc || (rc.shield && rc.shield.amount >= SHIELD_BASE / 2)) special = false;
+      // 盾が十分残っているなら無駄打ちせず、SPを保持して通常攻撃
+      const rc = weakestAlly(b, u.side, start);
+      if (rc.shield && rc.shield.amount >= SHIELD_BASE / 2) special = false;
     }
     if (special) u.sp = 0;
     else if (u.sp < 100) u.sp = Math.min(100, u.sp + 34);
     actions.push({ u, special, skill });
   }
 
-  // 4. 対象・効果量の決定（開始スナップショット基準）
+  // 対象・効果量の決定（開始スナップショット基準）
   const effects = [];
   for (const { u, special, skill } of actions) {
-    const role = start.get(u).role;
     const enemies = b.units.filter(v => v.side !== u.side && start.get(v).alive);
     if (!enemies.length) continue;
-    const target = enemies.find(v => start.get(v).role === 'front') || enemies[0];
-    const e = { u, special, role, receiver: target, kind: 'damage', val: 0 };
-    if (!special) {
-      e.skillId = 'basic'; e.label = '通常攻撃';
-      e.style = role === 'front' ? 'melee' : 'ranged';
-      e.val = calcDamage(u.d.st.atk, target.d.st.def, 1, rng(b));
+    const e = { u, special, role: u.slot, kind: 'damage', val: 0, aff: null };
+    if (!special || skill.effectKind === 'damage') {
+      const target = pickTarget(b, enemies);
+      e.receiver = target;
+      e.aff = affinity(u.d.attr, target.d.attr);
+      if (!special) {
+        e.skillId = 'basic'; e.label = '通常攻撃';
+        e.style = u.slot === 'front' ? 'melee' : 'ranged';
+        e.val = calcDamage(u.d.st.atk, target.d.st.def, (u.slot === 'rear' ? REAR_BASIC_MUL : 1) * affinityMul(e.aff), rng(b));
+      } else {
+        e.skillId = skill.id; e.label = skill.displayName; e.style = skill.attackStyle;
+        e.val = calcDamage(u.d.st[skill.stat], target.d.st.def, skill.mul * affinityMul(e.aff), rng(b));
+      }
     } else {
       e.skillId = skill.id; e.label = skill.displayName; e.style = skill.attackStyle;
-      if (skill.effectKind === 'heal') {
-        const friends = b.units.filter(v => v.side === u.side && start.get(v).alive);
-        e.kind = 'heal';
-        e.receiver = friends.reduce((a, c) => a.hp / a.maxHp < c.hp / c.maxHp ? a : c);
-        e.val = Math.round(26 * (u.d.st.mag / 100));
-      } else if (skill.effectKind === 'shield') {
-        e.kind = 'shield';
-        e.receiver = frontAtStart(b, u.side, start);
-        e.val = Math.min(SHIELD_BASE, shieldCap(e.receiver));
-      } else {
-        e.val = calcDamage(u.d.st[skill.stat], target.d.st.def, skill.mul, rng(b));
-      }
+      e.receiver = weakestAlly(b, u.side, start);
+      if (skill.effectKind === 'heal') { e.kind = 'heal'; e.val = Math.round(26 * (u.d.st.mag / 100)); }
+      else { e.kind = 'shield'; e.val = Math.min(SHIELD_BASE, shieldCap(e.receiver)); }
     }
     effects.push(e);
   }
@@ -403,11 +440,10 @@ function stepBattle(b) {
   return b.log.slice(from);
 }
 
-// 5〜9. 効果の一括適用 → KO一括確定 → 昇格 → 終了判定
+// 効果の一括適用 → KO一括確定 → 終了判定（前に出る動きはなし）
 function resolveTick(b, start, effects) {
   const t = b.tick;
 
-  // 5. 受け手ごとに集約して一回で適用。イベントごとの数値は残す
   const byRecv = new Map();
   for (const e of effects) {
     if (!byRecv.has(e.receiver)) byRecv.set(e.receiver, []);
@@ -419,8 +455,8 @@ function resolveTick(b, start, effects) {
     for (const e of list) {
       const ev = {
         type: e.kind, actorId: e.u.id, targetId: r.id, skillId: e.skillId, special: e.special,
-        attackStyle: e.style, actorRole: e.role,
-        actorPosition: posOf(e.u.side, e.role), targetPosition: posOf(r.side, start.get(r).role),
+        attackStyle: e.style, actorRole: e.role, affinity: e.aff,
+        actorPosition: posOf(e.u), targetPosition: posOf(r),
         amount: e.val, hpBefore: running, shieldAbsorbed: 0,
         label: `${e.u.d.name} → ${r.d.name}：${e.label}`
       };
@@ -441,10 +477,8 @@ function resolveTick(b, start, effects) {
       ev.shieldExpiresAtTick = r.shield ? r.shield.expiresAtTick : null;
       e.ev = ev;
     }
-    // ダメージ（盾吸収後）と回復を合算し、最後に一度だけclamp
     r.hp = clamp(hp0 - net + heal, 0, r.maxHp);
     if (r.shield) { r.shield.amount = shieldLeft; if (shieldLeft <= 0) r.shield = null; }
-    // 新しい盾は加算せず max で更新。期限は再付与時から（次tickから有効）
     if (newShield > 0 && r.hp > 0) {
       const amount = Math.min(shieldCap(r), Math.max(r.shield ? r.shield.amount : 0, newShield));
       r.shield = { amount, expiresAtTick: t + SHIELD_TICKS };
@@ -456,29 +490,14 @@ function resolveTick(b, start, effects) {
   }
   for (const e of effects) pushEvent(b, e.ev);
 
-  // 6. KOを一括確定。位置は昇格前（tick開始時）の役割で固定
+  // KOを一括確定。位置は固定なのでその場で消える
   const kos = b.units.filter(u => start.get(u).alive && !isAlive(u));
   for (const u of kos) {
     u.koTick = t; u.shield = null;
-    pushEvent(b, { type: 'ko', targetId: u.id, koPosition: posOf(u.side, start.get(u).role), label: `${u.d.name}は戦闘不能！` });
+    pushEvent(b, { type: 'ko', targetId: u.id, koPosition: posOf(u), label: `${u.d.name}は戦闘不能！` });
   }
 
-  // 7. 昇格：元前衛がKOし、元後衛が生存している場合のみ
-  for (const side of ['blue', 'red']) {
-    const team = b.units.filter(u => u.side === side);
-    const fell = team.find(u => kos.includes(u) && start.get(u).role === 'front');
-    const survivor = team.find(u => isAlive(u) && start.get(u).role === 'rear');
-    if (fell && survivor) {
-      survivor.promotedAtTick = t;
-      pushEvent(b, {
-        type: 'promotion', targetId: survivor.id,
-        actorPosition: posOf(side, 'rear'), targetPosition: posOf(side, 'front'),
-        label: `${survivor.d.name}が前衛へ！`
-      });
-    }
-  }
-
-  // 8. 終了判定
+  // 終了判定
   const aliveBlue = b.units.some(u => u.side === 'blue' && isAlive(u));
   const aliveRed = b.units.some(u => u.side === 'red' && isAlive(u));
   if (!aliveBlue || !aliveRed || t >= TICK_LIMIT) {
@@ -495,7 +514,7 @@ function resolveTick(b, start, effects) {
 
 function runToEnd(b) { while (!b.done) stepBattle(b); return b; }
 
-// 候補の再抽選（F03）：選択済みは位置ごと固定し、残り枠だけ差し替える
+// 候補の再抽選：選択済みは位置ごと固定し、残り枠だけ差し替える
 function rerollPoolPure(pool, picked, rivals, all, rand = Math.random) {
   const keep = new Set(picked), rivalSet = new Set(rivals.map(u => u.code));
   const usable = all.filter(u => !rivalSet.has(u.code) && !keep.has(u.code));
@@ -513,10 +532,11 @@ function rerollPoolPure(pool, picked, rivals, all, rand = Math.random) {
 }
 
 globalThis.Core = {
-  VERSION, DATA, ALL, SKILLS, SKILLS_BY_ID, POS, TPS, TICK_LIMIT, SHIELD_BASE, SHIELD_TICKS,
-  SHAPES, sizeOf, shapeSvg,
+  VERSION, PREF_NAME, DATA, ALL, SKILLS, SKILLS_BY_ID, POS, ROWS, TPS, TICK_LIMIT, SHIELD_BASE, SHIELD_TICKS,
+  SHAPES, sizeOf, shapeSvg, ATTRS, BEATS, ADV_MUL, DIS_MUL, TARGET_WEIGHT, REAR_BASIC_MUL,
+  affinity, affinityMul, assignAttrs, pickTarget, weakestAlly,
   esc, rng, unit, skillName, calcDamage, createBattle, stepBattle, resolveTick, snapshotStart,
-  runToEnd, effectiveRole, isAlive, shieldCap, posOf, unitById, rerollPoolPure, shuffleWith
+  runToEnd, isAlive, shieldCap, posOf, unitById, rerollPoolPure, shuffleWith
 };
 </script>
 
@@ -526,26 +546,37 @@ const $ = s => document.querySelector(s), app = $('#app');
 const fmt = n => Math.round(n).toLocaleString('ja-JP');
 const byCode = new Map(ALL.map(u => [u.code, u]));
 const randSeed = () => Math.floor(Math.random() * 2147483647);
+const W = 1000, H = 640;   // Canvasの大きさ
 
-let screen = 'title', pool = [], picked = [], rivals = [], front = 0, seed = 1;
+// picked[0] が奥の段A、picked[1] が手前の段B。mySlots / rivalSlots はそれぞれの前衛・後衛
+let screen = 'title', pool = [], picked = [], rivals = [], mySlots = ['front', 'rear'], rivalSlots = ['front', 'rear'], seed = 1;
 let battle = null, view = null, paused = false, loopToken = 0;
-let playbackSpeed = .85;   // アプリ起動時に一度だけ初期化（F09）
+let playbackSpeed = .85;   // アプリ起動時に一度だけ初期化
 
 document.title = '市町村ドラフトバトル ' + VERSION;
 $('#verchip').textContent = `β ${VERSION} · 2対2`;
+$('#prefname').textContent = PREF_NAME;
+
+const attrTag = u => `<span class="attr attr-${u.attr}">${ATTR_ICON[u.attr]} ${u.attr}</span>`;
+const slotName = s => s === 'front' ? '前衛' : '後衛';
+const rowName = i => i === 0 ? '奥の段' : '手前の段';
+const legend = () => `<div class="legend">相性：${ATTRS.map(a => `${ATTR_ICON[a]}${a}`).join(' → ')} → ${ATTR_ICON[ATTRS[0]]}${ATTRS[0]}（矢印の先の相手に強い。有利×${ADV_MUL}・不利×${DIS_MUL}）</div>`;
 
 function townCard(u) {
-  return `<button class="town ${picked.includes(u.code) ? 'sel' : ''}" data-pick="${u.code}">${shapeSvg(u)}<strong>${esc(u.name)}</strong><small>高齢化率 ${u.elder_pct.toFixed(2)}% ｜ 密度 ${fmt(u.density_per_km2_mixed_year)}/km²</small><span class="tag">★ ${esc(skillName(u))}</span><small>HP ${u.st.hp} · 攻 ${u.st.atk} · 守 ${u.st.def} · 速 ${u.st.spd} · 魔 ${u.st.mag}</small></button>`;
+  return `<button class="town ${picked.includes(u.code) ? 'sel' : ''}" data-pick="${u.code}">${shapeSvg(u)}<strong>${esc(u.name)}</strong><small>${attrTag(u)} 人口密度 県内${u.densityRank}位</small><small>高齢化率 ${u.elder_pct.toFixed(1)}% ｜ 密度 ${fmt(u.density)}/km²</small><span class="tag">★ ${esc(skillName(u))}</span><small>HP ${u.st.hp} · 攻 ${u.st.atk} · 守 ${u.st.def} · 速 ${u.st.spd} · 魔 ${u.st.mag}</small></button>`;
+}
+function teamLine(list, slots, red) {
+  return list.map((u, i) => `<span class="chip rival">${shapeSvg(u, red ? 'chipsvg red' : 'chipsvg')}${esc(u.name)} ${attrTag(u)} <small>${rowName(i)}・${slotName(slots[i])}</small></span>`).join(' ');
 }
 
 function render() {
   if (screen === 'title') {
-    app.innerHTML = `<section class="hero"><h2>まちの数字が、必殺技になる。</h2><p>福岡県60市町村から2体を選び、前衛と後衛を決める。<br>奥行きのある対面ATBで、戦闘は完全オート。</p><button class="primary" id="new">ドラフト開始 →</button></section>`;
+    app.innerHTML = `<section class="hero"><h2>まちの数字が、必殺技になる。</h2><p>${PREF_NAME}の${ALL.length}市町村から2体を選び、それぞれ前衛か後衛かを決める。<br>都会・郊外・田舎の三すくみ。戦闘は完全オート。</p><button class="primary" id="new">ドラフト開始 →</button></section>`;
     $('#new').onclick = newGame;
   }
   if (screen === 'draft') {
     app.innerHTML = `<h2>① 2つの市町村を選ぼう <small>${picked.length}/2</small></h2>
-      <section class="panel"><b>相手チーム（先に公開）</b><div class="row">${rivals.map(u => `<span class="chip rival">${shapeSvg(u, 'chipsvg red')}${esc(u.name)} · ${esc(skillName(u))}</span>`).join('')}</div></section>
+      <section class="panel"><b>相手チーム（先に公開）</b><div class="row" style="margin-top:6px">${teamLine(rivals, rivalSlots, true)}</div><div style="margin-top:8px">${legend()}</div></section>
       <div class="panel"><div class="row">
         <label>好きな市町村を指名 <select id="direct"><option value="">選択してください</option>${ALL.filter(u => !rivals.some(r => r.code === u.code)).map(u => `<option value="${u.code}">${esc(u.name)}</option>`).join('')}</select></label>
         <button id="add">候補に追加</button>
@@ -553,7 +584,7 @@ function render() {
         <button id="restart">最初からやり直す</button>
       </div></div>
       <section class="grid" id="picklist">${pool.map(townCard).join('')}</section>
-      <div class="panel status"><div>選択：${picked.map(c => esc(byCode.get(c).name)).join(' ＋ ') || 'まだ選択していません'}</div><button class="primary" id="next" ${picked.length !== 2 ? 'disabled' : ''}>前衛・後衛を決める →</button></div>`;
+      <div class="panel status"><div>選択：${picked.map(c => esc(byCode.get(c).name)).join(' ＋ ') || 'まだ選択していません'}</div><button class="primary" id="next" ${picked.length !== 2 ? 'disabled' : ''}>配置を決める →</button></div>`;
     document.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
       const id = b.dataset.pick;
       if (picked.includes(id)) picked = picked.filter(x => x !== id);
@@ -569,16 +600,24 @@ function render() {
     };
     $('#reroll').onclick = rerollPool;
     $('#restart').onclick = newGame;
-    $('#next').onclick = () => { front = 0; screen = 'formation'; render(); };
+    $('#next').onclick = () => { mySlots = ['front', 'rear']; screen = 'formation'; render(); };
   }
   if (screen === 'formation') {
     const a = picked.map(c => byCode.get(c));
-    app.innerHTML = `<h2>② 前衛・後衛を決めよう</h2><div class="panel"><p>前衛が敵の攻撃を引き受けます。前衛が倒れると後衛が前に出ます。戦闘不能の自治体は攻撃せず、画面から消えます。</p><div class="grid">${[front, 1 - front].map((i, j) => `<div class="town" style="padding:15px">${shapeSvg(a[i], 'big')}<span class="tag">${j ? '後衛 · BACK' : '前衛 · FRONT'}</span><h2>${esc(a[i].name)}</h2><p>★ ${esc(skillName(a[i]))}</p><small>HP ${a[i].st.hp}　防御 ${a[i].st.def}　速度 ${a[i].st.spd}</small></div>`).join('')}</div><div class="controls"><button id="swap">⇄ 前衛・後衛を入れ替え</button><button class="primary" id="fight">戦闘開始 →</button></div></div>`;
-    $('#swap').onclick = () => { front = 1 - front; render(); };
+    app.innerHTML = `<h2>② 配置を決めよう</h2><div class="panel">
+      <p>奥の段と手前の段に1体ずつ。それぞれ前衛か後衛かを選べます（2体とも前衛・2体とも後衛も可）。<br><small>前衛：狙われやすい（重み${TARGET_WEIGHT.front}）・体当たり。後衛：狙われにくい（重み${TARGET_WEIGHT.rear}）・通常攻撃の威力×${REAR_BASIC_MUL}。</small></p>
+      <div class="grid">${a.map((u, i) => `<div class="town" style="padding:15px">${shapeSvg(u, 'big')}<span class="tag">${rowName(i)}</span><h2>${esc(u.name)}</h2><p>${attrTag(u)} ★ ${esc(skillName(u))}</p><small>HP ${u.st.hp}　防御 ${u.st.def}　速度 ${u.st.spd}</small><div class="slotbtns"><button data-slot="${i}:front" class="${mySlots[i] === 'front' ? 'on' : ''}">前衛</button><button data-slot="${i}:rear" class="${mySlots[i] === 'rear' ? 'on' : ''}">後衛</button></div></div>`).join('')}</div>
+      <div class="panel" style="margin-top:12px"><b>相手の配置</b><div class="row" style="margin-top:6px">${teamLine(rivals, rivalSlots, true)}</div><div style="margin-top:8px">${legend()}</div></div>
+      <div class="controls"><button id="swap">⇅ 奥と手前を入れ替え</button><button class="primary" id="fight">戦闘開始 →</button></div></div>`;
+    document.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => {
+      const [i, s] = b.dataset.slot.split(':');
+      mySlots[+i] = s; render();
+    });
+    $('#swap').onclick = () => { picked.reverse(); mySlots.reverse(); render(); };
     $('#fight').onclick = () => startBattle(seed);
   }
   if (screen === 'battle') {
-    app.innerHTML = `<h2>③ 戦闘 <small>2対2 · 完全オート</small></h2><div class="panel"><div class="status" id="hud"></div><div class="stage"><canvas id="arena" width="1000" height="560"></canvas></div><div class="event" id="event">戦闘開始！</div><div class="controls"><button id="pause">一時停止</button><button id="speed">速度 ×${playbackSpeed}</button><button id="skip">結果まで進む</button></div></div>`;
+    app.innerHTML = `<h2>③ 戦闘 <small>2対2 · 完全オート</small></h2><div class="panel"><div class="status" id="hud"></div><div class="stage"><canvas id="arena" width="${W}" height="${H}"></canvas></div><div class="event" id="event">戦闘開始！</div><div class="controls"><button id="pause">一時停止</button><button id="speed">速度 ×${playbackSpeed}</button><button id="skip">結果まで進む</button></div></div>`;
     $('#pause').onclick = () => { paused = !paused; $('#pause').textContent = paused ? '再開' : '一時停止'; };
     $('#speed').onclick = () => {
       playbackSpeed = playbackSpeed === .85 ? 1 : playbackSpeed === 1 ? 1.5 : .85;
@@ -594,8 +633,8 @@ function render() {
     const tail = b.log.filter(e => e.tick === b.endTick && e.type !== 'shield_end');
     app.innerHTML = `<h2>対戦結果</h2><div class="panel"><div class="winner">${b.winner === 'blue' ? '勝利！' : b.winner === 'red' ? '敗北' : '引き分け'}</div>
       <p style="text-align:center">戦闘時間 ${(b.endTick / TPS).toFixed(1)}秒 · シード ${seed}</p>
-      <div class="stats">${b.units.map(u => `<div class="stat">${shapeSvg(u.d, u.side === 'red' ? 'mini red' : 'mini')}<b>${esc(u.d.name)}</b><br><small>${u.side === 'blue' ? '味方' : '敵'}・${u.initialSlot === 'front' ? '前衛' : '後衛'}${u.promotedAtTick !== null ? '→前衛' : ''}${isAlive(u) ? '' : '・戦闘不能'}</small><br>与ダメージ ${u.dealt} / 回復 ${u.healed} / 盾 ${u.shielded}<br><span class="tag">${esc(skillName(u.d))}</span></div>`).join('')}</div>
-      <div class="panel"><b>決着の瞬間</b><ol class="log">${tail.map(e => `<li>${esc(e.label)}${e.type === 'damage' ? `（${e.amount}）` : ''}</li>`).join('')}</ol></div>
+      <div class="stats">${b.units.map(u => `<div class="stat">${shapeSvg(u.d, u.side === 'red' ? 'mini red' : 'mini')}<b>${esc(u.d.name)}</b><br><small>${u.side === 'blue' ? '味方' : '敵'}・${u.row === 'far' ? '奥' : '手前'}の${slotName(u.slot)}${isAlive(u) ? '' : '・戦闘不能'}</small><br>${attrTag(u.d)}<br>与ダメージ ${u.dealt} / 回復 ${u.healed} / 盾 ${u.shielded}<br><span class="tag">${esc(skillName(u.d))}</span></div>`).join('')}</div>
+      <div class="panel"><b>決着の瞬間</b><ol class="log">${tail.map(e => `<li>${esc(e.label)}${e.type === 'damage' ? `（${e.amount}${e.affinity === 'adv' ? '・有利' : e.affinity === 'dis' ? '・不利' : ''}）` : ''}</li>`).join('')}</ol></div>
       <div class="controls"><button id="replay">同じシードで再戦</button><button id="again">新シードで再戦</button><button class="primary" id="new">ドラフトへ戻る</button></div></div>`;
     $('#replay').onclick = () => startBattle(seed);
     $('#again').onclick = () => startBattle(randSeed());
@@ -607,23 +646,26 @@ function newGame() {
   seed = randSeed();
   const a = shuffleWith(ALL);
   rivals = a.slice(0, 2); pool = a.slice(2, 8); picked = [];
+  rivalSlots = [Math.random() < .5 ? 'front' : 'rear', Math.random() < .5 ? 'front' : 'rear'];
   screen = 'draft'; render();
 }
 function rerollPool() { pool = rerollPoolPure(pool, picked, rivals, ALL); render(); }
 
 function startBattle(s) {
   seed = s;
-  battle = createBattle([byCode.get(picked[front]), byCode.get(picked[1 - front])], rivals, seed);
+  battle = createBattle(
+    picked.map((c, i) => ({ d: byCode.get(c), slot: mySlots[i] })),
+    rivals.map((d, i) => ({ d, slot: rivalSlots[i] })), seed);
   view = createView(battle);
   paused = false;
   screen = 'battle'; render();
 }
 function finish() { screen = 'result'; render(); }
 
-// ===== 演出（表示用スナップショットとイベントキュー：F02・F06） =====
+// ===== 演出（表示用スナップショットとイベントキュー） =====
 function createView(b) {
   return {
-    disp: new Map(b.units.map(u => [u.id, { hp: u.hp, shield: 0, shieldExp: null, role: u.initialSlot, gone: false }])),
+    disp: new Map(b.units.map(u => [u.id, { hp: u.hp, shield: 0, shieldExp: null, gone: false }])),
     cursor: 0, active: null, finalMs: 0, dispTick: 0, tickBudget: 0, last: 0, victory: false, hudCache: new Map()
   };
 }
@@ -631,13 +673,11 @@ function durationOf(ev) {
   switch (ev.type) {
     case 'damage': case 'heal': case 'shield': return ev.special ? 1150 : 480;
     case 'ko': return 520;
-    case 'promotion': return 480;
     case 'victory': return 700;
     default: return 0;
   }
 }
 function applyAtOf(ev) {
-  if (ev.type === 'promotion') return 1;
   if (ev.type === 'damage' || ev.type === 'heal' || ev.type === 'shield') return ev.special ? .55 : .5;
   return 0;
 }
@@ -647,7 +687,6 @@ function applyDisplay(ev) {
     case 'damage': case 'heal': case 'shield':
       d.hp = ev.hpAfter; d.shield = ev.shieldAfter; d.shieldExp = ev.shieldExpiresAtTick; break;
     case 'ko': d.gone = true; d.hp = 0; d.shield = 0; break;
-    case 'promotion': d.role = 'front'; break;
     case 'shield_end': d.shield = 0; break;
     case 'victory': view.victory = true; break;
   }
@@ -709,9 +748,9 @@ function loop(ts, token) {
   requestAnimationFrame(t => loop(t, token));
 }
 
-// ===== HUD：初回だけ組み立て、以降は変化した所だけ書き換える（F11） =====
+// ===== HUD：初回だけ組み立て、以降は変化した所だけ書き換える =====
 function buildHud() {
-  $('#hud').innerHTML = ['blue', 'red'].map(side => `<div data-side="${side}"><b>${side === 'blue' ? '味方' : '相手'}</b>${battle.units.filter(u => u.side === side).map(u => `<div class="hudunit" id="hud-${u.id}"><small><span class="nm">${esc(u.d.name)}</span> <b class="role"></b> <span class="hp"></span> <span class="sh"></span></small><div class="bar"><i></i></div></div>`).join('')}<small class="konote"></small></div>`).join('');
+  $('#hud').innerHTML = ['blue', 'red'].map(side => `<div data-side="${side}"><b>${side === 'blue' ? '味方' : '相手'}</b>${battle.units.filter(u => u.side === side).map(u => `<div class="hudunit" id="hud-${u.id}"><small><span class="nm">${esc(u.d.name)}</span> ${ATTR_ICON[u.d.attr]} <b class="role">${u.row === 'far' ? '奥' : '手前'}・${slotName(u.slot)}</b> <span class="hp"></span> <span class="sh"></span></small><div class="bar"><i></i></div></div>`).join('')}<small class="konote"></small></div>`).join('');
   view.hudCache.clear();
 }
 function setText(el, key, text) {
@@ -724,7 +763,6 @@ function updateHud() {
     const k = u.id + ':';
     if (view.hudCache.get(k + 'gone') !== d.gone) { view.hudCache.set(k + 'gone', d.gone); row.style.display = d.gone ? 'none' : ''; }
     if (d.gone) continue;
-    setText(row.querySelector('.role'), k + 'role', d.role === 'front' ? '前衛' : '後衛');
     setText(row.querySelector('.hp'), k + 'hp', `${d.hp}/${u.maxHp}`);
     const left = d.shield > 0 && d.shieldExp !== null ? Math.max(0, (d.shieldExp - view.dispTick) / TPS) : 0;
     setText(row.querySelector('.sh'), k + 'sh', d.shield > 0 ? `盾 ${d.shield}（残${left.toFixed(1)}秒）` : '');
@@ -738,7 +776,7 @@ function updateHud() {
 }
 
 // ===== Canvas描画 =====
-const SHAPE_BASE_R = 56;   // 大きさ係数1.0のときの半径（Canvas座標）
+const SHAPE_BASE_R = 95;   // 大きさ係数1.0のときの半径（Canvas座標）
 // 市町村の形（本土＋島）をパスにする
 function shapePath(ctx, sh, x, y, R) {
   const k = R / 100;
@@ -749,39 +787,36 @@ function shapePath(ctx, sh, x, y, R) {
     ctx.closePath();
   }
 }
-const lerp = (a, b, f) => ({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, scale: a.scale + (b.scale - a.scale) * f });
-const ease = f => f < .5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
 const isAction = ev => ev.type === 'damage' || ev.type === 'heal' || ev.type === 'shield';
 const isLunge = ev => isAction(ev) && ev.attackStyle === 'melee' && ev.actorRole === 'front';
 
-// 表示用の現在位置（論理位置＋昇格移動＋体当たり）
+// 表示用の現在位置（固定位置＋体当たり）
 function drawPos(u) {
-  const d = view.disp.get(u.id), a = view.active;
-  let p = posOf(u.side, d.role);
+  const a = view.active;
+  let p = posOf(u);
   if (!a) return p;
   const ev = a.ev, f = Math.min(1, a.elapsed / Math.max(1, a.dur));
-  if (ev.type === 'promotion' && ev.targetId === u.id) p = lerp(ev.actorPosition, ev.targetPosition, ease(f));
   if (ev.type === 'ko' && ev.targetId === u.id) p = { ...ev.koPosition };
   if (isLunge(ev) && ev.actorId === u.id) {
     const s = ev.actorPosition, t = ev.targetPosition, hop = Math.sin(f * Math.PI);
-    const dist = Math.hypot(t.x - s.x, t.y - s.y), k = Math.max(0, dist - 106) / Math.max(1, dist);
+    const dist = Math.hypot(t.x - s.x, t.y - s.y), k = Math.max(0, dist - 150) / Math.max(1, dist);
     p = { x: s.x + (t.x - s.x) * k * hop, y: s.y + (t.y - s.y) * k * hop * .78, scale: s.scale };
   }
   return p;
 }
 
 function draw() {
-  const c = $('#arena'), ctx = c.getContext('2d'), b = battle, v = view, W = 1000, H = 560;
+  const c = $('#arena'), ctx = c.getContext('2d'), b = battle, v = view;
   ctx.clearRect(0, 0, W, H);
-  // FF風の疑似遠近感。奥の足場を狭く・薄く描く
+  // 疑似遠近感。奥の足場を狭く・薄く描く
   const sky = ctx.createLinearGradient(0, 0, 0, H);
   sky.addColorStop(0, '#2d3d55'); sky.addColorStop(.45, '#3b516b'); sky.addColorStop(1, '#182b43');
   ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#34485f'; ctx.fillRect(0, 95, W, 90);
-  ctx.fillStyle = '#66758d'; ctx.beginPath(); ctx.moveTo(215, 177); ctx.lineTo(785, 177); ctx.lineTo(1050, 560); ctx.lineTo(-50, 560); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#66758d'; ctx.beginPath(); ctx.moveTo(215, 177); ctx.lineTo(785, 177); ctx.lineTo(1080, H); ctx.lineTo(-80, H); ctx.closePath(); ctx.fill();
   ctx.save(); ctx.strokeStyle = '#acbfd3'; ctx.globalAlpha = .24;
-  for (let i = 0; i <= 12; i++) { ctx.beginPath(); ctx.moveTo(215 + i * 47.5, 177); ctx.lineTo(-50 + i * 91.7, 560); ctx.stroke(); }
-  for (const y of [194, 218, 248, 290, 346, 420, 510]) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1000, y); ctx.stroke(); }
+  for (let i = 0; i <= 12; i++) { ctx.beginPath(); ctx.moveTo(215 + i * 47.5, 177); ctx.lineTo(-80 + i * 96.7, H); ctx.stroke(); }
+  for (const y of [194, 222, 258, 306, 370, 452, 552]) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
   ctx.restore();
   ctx.fillStyle = '#dff0ff'; ctx.textAlign = 'center'; ctx.font = 'bold 21px system-ui';
   ctx.fillText('味方', 108, 43); ctx.fillText('敵', 892, 43);
@@ -789,38 +824,40 @@ function draw() {
 
   const a = v.active, ev = a ? a.ev : null, f = a ? Math.min(1, a.elapsed / Math.max(1, a.dur)) : 0;
 
-  // 描画対象：倒れていないユニット＋KO演出中のユニット（KO位置で消えていく）
+  // 描画対象：倒れていないユニット＋KO演出中のユニット。奥（yが小さい）から順に描く
   const list = b.units
     .filter(u => !v.disp.get(u.id).gone || (ev && ev.type === 'ko' && ev.targetId === u.id))
-    .map(u => ({ u, p: drawPos(u) }))
-    .sort((m, n) => m.p.y - n.p.y);
-  for (const { u, p } of list) {
+    .map(u => ({ u, p: drawPos(u), actor: !!(ev && isAction(ev) && ev.actorId === u.id) }))
+    .sort((m, n) => (m.p.y - n.p.y) || (m.actor - n.actor));
+  for (const { u, p, actor } of list) {
     const d = v.disp.get(u.id), { x, y, scale } = p;
-    const actor = ev && isAction(ev) && ev.actorId === u.id;
     const fading = ev && ev.type === 'ko' && ev.targetId === u.id;
     const sh = u.d.shape, R = SHAPE_BASE_R * u.d.size * scale;   // 形の座標±100 → 半径R
     ctx.save();
     if (fading) ctx.globalAlpha = Math.max(0, 1 - f * 1.4);
     ctx.fillStyle = 'rgba(13,24,40,.48)'; ctx.beginPath();
-    ctx.ellipse(x, y + sh.maxY / 100 * R * .92 + 6 * scale, Math.max(30 * scale, R * .9), 11 * scale, 0, 0, Math.PI * 2); ctx.fill();
-    const pulse = actor ? 1 + .055 * Math.sin(a.elapsed / 16 * .75) : 1;
+    ctx.ellipse(x, y + sh.maxY / 100 * R * .92 + 6 * scale, Math.max(30 * scale, R * .9), 12 * scale, 0, 0, Math.PI * 2); ctx.fill();
+    const pulse = actor ? 1 + .045 * Math.sin(a.elapsed / 16 * .75) : 1;
     if (actor) { ctx.shadowColor = u.side === 'blue' ? '#89dff3' : '#ffc3a0'; ctx.shadowBlur = ev.special ? 38 : 25; }
     shapePath(ctx, sh, x, y, R * pulse);
     ctx.fillStyle = u.side === 'blue' ? '#8acde0' : '#eeaf96'; ctx.fill();
     ctx.strokeStyle = '#edf7ff'; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.stroke(); ctx.shadowBlur = 0;
     // 目は本土の中で縁から最も遠い点に置く
     const ex = x + sh.e[0] / 100 * R, ey = y + sh.e[1] / 100 * R;
-    const eg = clamp(sh.ei / 100 * R * .38, 4 * scale, 10 * scale), er = clamp(eg * .36, 2.2, 3.6 * scale);
+    const eg = clamp(sh.ei / 100 * R * .38, 5 * scale, 14 * scale), er = clamp(eg * .36, 2.6, 5 * scale);
     ctx.fillStyle = '#183447'; ctx.beginPath();
     ctx.arc(ex - eg, ey, er, 0, Math.PI * 2); ctx.arc(ex + eg, ey, er, 0, Math.PI * 2); ctx.fill();
-    ctx.textAlign = 'center'; ctx.font = `bold ${Math.round(25 * scale)}px system-ui`; ctx.fillStyle = '#fff';
-    ctx.shadowColor = '#142338'; ctx.shadowBlur = 3; ctx.fillText(u.d.name, x, y + sh.maxY / 100 * R + 30 * scale); ctx.shadowBlur = 0;
-    const hpw = 98 * scale, hh = 11 * scale, barY = y + sh.minY / 100 * R - 22 * scale;
+    // 名前（属性アイコンつき）
+    ctx.textAlign = 'center'; ctx.font = `bold ${Math.round(24 * scale)}px system-ui`; ctx.fillStyle = '#fff';
+    ctx.shadowColor = '#142338'; ctx.shadowBlur = 4;
+    ctx.fillText(`${ATTR_ICON[u.d.attr]}${u.d.name}`, x, Math.min(H - 8, y + sh.maxY / 100 * R + 28 * scale)); ctx.shadowBlur = 0;
+    // HPバー
+    const hpw = 104 * scale, hh = 11 * scale, barY = y + sh.minY / 100 * R - 20 * scale;
     ctx.fillStyle = '#1a2d43'; ctx.fillRect(x - hpw / 2, barY, hpw, hh);
     ctx.fillStyle = u.side === 'blue' ? '#8bdeb7' : '#f3bf8f'; ctx.fillRect(x - hpw / 2, barY, hpw * (d.hp / u.maxHp), hh);
-    ctx.strokeStyle = '#142335'; ctx.strokeRect(x - hpw / 2, barY, hpw, hh);
+    ctx.strokeStyle = '#142335'; ctx.lineWidth = 1.5; ctx.strokeRect(x - hpw / 2, barY, hpw, hh);
     // 盾の輪は本体の外側に描く
-    if (d.shield > 0) { ctx.strokeStyle = '#9cdeff'; ctx.lineWidth = 4; ctx.globalAlpha *= .9; ctx.beginPath(); ctx.arc(x, y, sh.maxR / 100 * R + 8 * scale, 0, Math.PI * 2); ctx.stroke(); }
+    if (d.shield > 0) { ctx.strokeStyle = '#9cdeff'; ctx.lineWidth = 4; ctx.globalAlpha *= .9; ctx.beginPath(); ctx.arc(x, y, sh.maxR / 100 * R * .85 + 8 * scale, 0, Math.PI * 2); ctx.stroke(); }
     ctx.restore();
   }
 
@@ -830,47 +867,54 @@ function draw() {
     const color = ev.type === 'heal' ? '#a5efc0' : ev.type === 'shield' ? '#9fdcf8' : ev.attackStyle === 'magic' ? '#d9b8ff' : '#ffe2a0';
     ctx.save();
     if (!isLunge(ev)) {
-      const cx = (s.x + t.x) / 2, cy = Math.min(s.y, t.y) - 85, q = Math.min(1, f / Math.max(.01, a.applyAt));
+      const cx = (s.x + t.x) / 2, cy = Math.min(s.y, t.y) - 110, q = Math.min(1, f / Math.max(.01, a.applyAt));
       ctx.globalAlpha = .8 * (1 - f * .6); ctx.strokeStyle = color; ctx.lineWidth = 4;
       ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.quadraticCurveTo(cx, cy, t.x, t.y); ctx.stroke();
       if (q < 1) {   // 弾・光球が軌道を飛ぶ
         const bx = (1 - q) * (1 - q) * s.x + 2 * (1 - q) * q * cx + q * q * t.x;
         const by = (1 - q) * (1 - q) * s.y + 2 * (1 - q) * q * cy + q * q * t.y;
         ctx.globalAlpha = 1; ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = ev.attackStyle === 'magic' ? 30 : 14;
-        ctx.beginPath(); ctx.arc(bx, by, ev.attackStyle === 'magic' ? 17 : 10, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.arc(bx, by, ev.attackStyle === 'magic' ? 19 : 11, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
       }
     }
     if (a.applied) {
       const g = Math.min(1, (f - a.applyAt) / Math.max(.01, 1 - a.applyAt));
       ctx.globalAlpha = Math.max(0, 1 - g * .8); ctx.strokeStyle = color; ctx.lineWidth = 5;
-      ctx.beginPath(); ctx.arc(t.x, t.y, 20 + g * 30, 0, Math.PI * 2); ctx.stroke();
-      ctx.globalAlpha = 1; ctx.fillStyle = '#ffe7b2'; ctx.textAlign = 'center'; ctx.font = 'bold 30px system-ui';
-      ctx.shadowColor = '#142338'; ctx.shadowBlur = 4;
+      ctx.beginPath(); ctx.arc(t.x, t.y, 24 + g * 36, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1; ctx.fillStyle = '#ffe7b2'; ctx.textAlign = 'center'; ctx.font = 'bold 34px system-ui';
+      ctx.shadowColor = '#142338'; ctx.shadowBlur = 5;
       const txt = ev.type === 'damage' ? `-${ev.amount}` + (ev.shieldAbsorbed ? `（盾${ev.shieldAbsorbed}）` : '') : ev.type === 'heal' ? `+${ev.amount}` : `盾+${ev.amount}`;
-      ctx.fillText(txt, t.x, t.y - 78 - g * 14);
+      // 数字は受け手のHPバーより上に出す
+      const tu = unitById(b, ev.targetId), tR = SHAPE_BASE_R * tu.d.size * t.scale;
+      const ty = Math.max(70, t.y + tu.d.shape.minY / 100 * tR - 32 * t.scale - g * 14);
+      ctx.fillText(txt, t.x, ty);
+      if (ev.affinity) {   // 相性の表示
+        ctx.font = 'bold 22px system-ui'; ctx.fillStyle = ev.affinity === 'adv' ? '#ffb15c' : '#a9b8c8';
+        ctx.fillText(ev.affinity === 'adv' ? '有利！' : '不利…', t.x, ty - 32);
+      }
     }
     if (ev.special) {   // 必殺技名
       ctx.globalAlpha = Math.min(1, f * 5) * (1 - Math.max(0, f - .8) * 5); ctx.fillStyle = '#fff4de'; ctx.textAlign = 'center';
-      ctx.font = 'bold 26px system-ui'; ctx.shadowColor = '#142338'; ctx.shadowBlur = 6;
-      ctx.fillText('★ ' + SKILLS_BY_ID[ev.skillId].displayName, s.x, s.y - 105 * s.scale);
+      ctx.font = 'bold 28px system-ui'; ctx.shadowColor = '#142338'; ctx.shadowBlur = 6;
+      ctx.fillText('★ ' + SKILLS_BY_ID[ev.skillId].displayName, s.x, Math.max(30, s.y - 120 * s.scale));
     }
     ctx.restore();
   }
 
-  // KOエフェクト：KO発生時に記録した位置に出す（F01）
+  // KOエフェクト：KO発生時に記録した位置に出す
   if (ev && ev.type === 'ko') {
     const p = ev.koPosition;
     ctx.save(); ctx.globalAlpha = (1 - f) * .8; ctx.strokeStyle = '#ffe5c2'; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.arc(p.x, p.y, (18 + f * 40) * p.scale, 0, Math.PI * 2); ctx.stroke();
-    ctx.font = 'bold 26px system-ui'; ctx.fillStyle = '#fff4de'; ctx.textAlign = 'center';
-    ctx.fillText('KO', p.x, p.y - 55 - f * 22); ctx.restore();
+    ctx.beginPath(); ctx.arc(p.x, p.y, (24 + f * 50) * p.scale, 0, Math.PI * 2); ctx.stroke();
+    ctx.font = 'bold 28px system-ui'; ctx.fillStyle = '#fff4de'; ctx.textAlign = 'center';
+    ctx.fillText('KO', p.x, p.y - 60 - f * 22); ctx.restore();
   }
 
   // 決着表示
   if (v.victory) {
-    ctx.save(); ctx.fillStyle = 'rgba(10,18,30,.55)'; ctx.fillRect(0, 230, W, 100);
+    ctx.save(); ctx.fillStyle = 'rgba(10,18,30,.55)'; ctx.fillRect(0, H / 2 - 50, W, 100);
     ctx.fillStyle = '#f4d28e'; ctx.textAlign = 'center'; ctx.font = 'bold 54px system-ui';
-    ctx.fillText(b.winner === 'draw' ? '引き分け' : '決着！', 500, 298); ctx.restore();
+    ctx.fillText(b.winner === 'draw' ? '引き分け' : '決着！', 500, H / 2 + 18); ctx.restore();
   }
 }
 
