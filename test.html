@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>市町村ドラフトバトル テスト</title>
+<title>自治体タッグバトル テスト</title>
 <style>
 body{font-family:system-ui,'Noto Sans JP',sans-serif;background:#101b2b;color:#edf5ff;margin:0;padding:16px}
 table{border-collapse:collapse;width:100%;max-width:960px}
@@ -47,7 +47,7 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
     const kos = b.log.filter(e => e.type === 'ko');
     assert(kos.length === 2, 'KOが2件でない');
     for (const ko of kos) assert(samePos(ko.koPosition, C.posOf(C.unitById(b, ko.targetId))), 'KO位置が固定位置でない');
-    assert(samePos(C.POS.blue.far.rear, { x: 150, y: 270, scale: .85 }), '奥・後衛の座標が仕様と違う');
+    assert(samePos(C.POS.blue.far.rear, { x: 165, y: 270, scale: .85 }) && samePos(C.POS.red.near.front, { x: 655, y: 440, scale: 1.15 }), '座標が仕様と違う');
   });
 
   test('T02', '同tickで2体同時KO → 各自の位置、前に出る動きはなし', () => {

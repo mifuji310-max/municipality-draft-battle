@@ -3,46 +3,58 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>市町村ドラフトバトル v0.6.0</title>
+<title>自治体タッグバトル v0.6.1</title>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=0.6.1">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=0.6.1">
+<link rel="manifest" href="manifest.webmanifest?v=0.6.1">
+<meta name="theme-color" content="#0b1030">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
 <style>
-:root{font-family:system-ui,'Noto Sans JP',sans-serif;background:#101b2b;color:#edf5ff}
+:root{font-family:'DotGothic16',system-ui,sans-serif;background:#0b1030;color:#f4f6ff;letter-spacing:.02em}
 *{box-sizing:border-box}
 body{margin:0}
 button,select,input{font:inherit}
-button{cursor:pointer;background:#304d68;border:1px solid #6e8ca4;color:#fff;border-radius:9px;padding:11px}
-button:hover{background:#436783}
+button{cursor:pointer;background:linear-gradient(180deg,#2a3c9a,#17236b);border:2px solid #e9eef9;color:#fff;border-radius:6px;padding:11px;box-shadow:0 0 0 2px #0a1030}
+button:hover{background:linear-gradient(180deg,#3a52bf,#1f2e86)}
 button:disabled{opacity:.35}
-.primary{background:#e2bd77;color:#172438;font-weight:800;border:0}
+.primary{background:linear-gradient(180deg,#f6d98d,#d9a94e);color:#1a1d3a;font-weight:800;border-color:#fff4cf}
 .wrap{max-width:1040px;margin:auto;padding:15px}
-header{display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid #34465a;padding:13px 0}
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:2px solid #2c3a86;padding:13px 0}
+header h1{display:flex;align-items:center;gap:8px}
+header h1 img{width:34px;height:34px;image-rendering:pixelated;border-radius:6px}
 h1{font-size:clamp(20px,4vw,29px);margin:0}
 h2{font-size:21px;margin:15px 0 9px}
-.muted,small{color:#b1c4d5}
-.panel{background:#1b2d42;border:1px solid #3a5066;border-radius:13px;padding:14px;margin:12px 0}
+.muted,small{color:#c3cdf0}
+.panel{background:linear-gradient(180deg,#2b3f9c 0%,#141f63 100%);border:3px solid #e9eef9;border-radius:8px;box-shadow:0 0 0 2px #070b24,inset 0 0 0 1px #7088dc;padding:14px;margin:12px 0}
 .row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px}
-.town{min-height:133px;text-align:left;background:#243b52}
+.town{min-height:133px;text-align:left;background:linear-gradient(180deg,#24358a,#111a55);border:2px solid #c9d4f2;box-shadow:0 0 0 2px #070b24}
 .town.sel{outline:3px solid #e9c779}
 .town strong{font-size:18px}
 .town small{display:block;margin:6px 0}
 .tag{color:#f4d48b}
 .status{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.status>div{flex:1;min-width:140px;background:#263d55;padding:10px;border-radius:9px}
+.status>div{flex:1;min-width:140px;background:rgba(8,14,52,.55);border:1px solid #7088dc;padding:10px;border-radius:6px}
 .bar{height:8px;border-radius:8px;background:#475468;overflow:hidden;margin-top:5px}
 .bar i{display:block;height:100%;background:#88d7b6}
-.stage{position:relative;background:#14263c;border-radius:12px;overflow:hidden}
+.stage{position:relative;background:#14263c;border:2px solid #c9d4f2;border-radius:6px;overflow:hidden}
 canvas{width:100%;height:auto;display:block}
 .event{font-weight:800;color:#ffe0a1;font-size:clamp(16px,3.4vw,24px);text-align:center;min-height:32px;padding:8px}
 .controls{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:12px}
 .fine{font-size:12px;line-height:1.65;color:#a9bdcf}
 #picklist{max-height:420px;overflow:auto}
-select,input{background:#21364d;color:white;border:1px solid #70869b;border-radius:8px;padding:10px;max-width:100%}
+select,input{background:#111a55;color:white;border:2px solid #c9d4f2;border-radius:6px;padding:10px;max-width:100%}
 .winner{font-size:34px;color:#f4d28e;text-align:center}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.stat{padding:10px;background:#263b52;border-radius:8px}
-.hero{padding:35px 8px;text-align:center}
+.stat{padding:10px;background:rgba(8,14,52,.55);border:1px solid #7088dc;border-radius:6px}
+.hero{padding:10px 8px 30px;text-align:center}
+.emblem{display:block;width:min(520px,100%);margin:0 auto -24px;-webkit-mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 72%,transparent 100%);mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 72%,transparent 100%)}
+.gametitle{font-size:clamp(34px,8.5vw,64px);margin:0;color:#fff;letter-spacing:.06em;line-height:1.15;text-shadow:3px 3px 0 #7a4b12,-2px -2px 0 #7a4b12,2px -2px 0 #7a4b12,-2px 2px 0 #7a4b12,0 0 18px rgba(120,190,255,.7);position:relative}
+.gametitle small{display:block;font-size:.34em;color:#f6d98d;text-shadow:2px 2px 0 #0a1030;letter-spacing:.2em;margin-top:6px}
 .hero p{line-height:1.8}
-.chip{padding:5px 9px;border:1px solid #688096;border-radius:20px;font-size:13px}
+.chip{padding:5px 9px;border:1px solid #9fb0e8;border-radius:20px;font-size:13px;background:rgba(8,14,52,.45)}
 .chip.rival{display:inline-flex;align-items:center;gap:4px}
 .attr{display:inline-block;padding:1px 7px;border-radius:10px;font-size:12px;font-weight:700;color:#172438;white-space:nowrap}
 .attr-都会{background:#f2c26b}.attr-郊外{background:#9fd59a}.attr-田舎{background:#8fc7e8}
@@ -70,14 +82,14 @@ select,input{background:#21364d;color:white;border:1px solid #70869b;border-radi
 </head>
 <body>
 <div class="wrap">
-  <header><h1>市町村ドラフトバトル <small id="prefname"></small></h1><span class="chip" id="verchip">β · 2対2</span></header>
+  <header><h1><img src="assets/icon-192.png?v=0.6.1" alt="">自治体タッグバトル <small id="prefname"></small></h1><span class="chip" id="verchip">β · 2対2</span></header>
   <main id="app"></main>
-  <footer class="fine">実データ：人口・年齢構成は総務省「住民基本台帳に基づく人口、人口動態及び世帯数」（2026年1月1日）、面積は国土地理院「全国都道府県市区町村別面積調」（2026年4月1日）。人口密度はこの2つから計算。属性（都会・郊外・田舎）は県内の人口密度の順位で3等分したもの。能力値・必殺技への変換はゲーム用の仮設定。輪郭：「国土数値情報（行政区域データ）」（国土交通省）を加工して作成（スマートニュース メディア研究所 japan-topography の簡素化版を利用。区は市単位に結合、遠い離島は近くに寄せて表示、大きさは面積を圧縮した目安）。参考サイト「地元の最強」の輪郭衝突という着想と、共有画像のJRPG風の奥行き表現を参考にした独立した試作。参考サイトのコード・素材は使用していません。</footer>
+  <footer class="fine">実データ：人口・年齢構成は総務省「住民基本台帳に基づく人口、人口動態及び世帯数」（2026年1月1日）、面積は国土地理院「全国都道府県市区町村別面積調」（2026年4月1日）。人口密度はこの2つから計算。属性（都会・郊外・田舎）は県内の人口密度の順位で3等分したもの。能力値・必殺技への変換はゲーム用の仮設定。輪郭：「国土数値情報（行政区域データ）」（国土交通省）を加工して作成（スマートニュース メディア研究所 japan-topography の簡素化版を利用。区は市単位に結合、遠い離島は近くに寄せて表示、大きさは面積を圧縮した目安）。参考サイト「地元の最強」の輪郭衝突という着想と、共有画像のJRPG風の奥行き表現を参考にした独立した試作。参考サイトのコード・素材は使用していません。アイコン・タイトルの紋章は画像生成AIで作成。文字フォント：DotGothic16（SIL Open Font License）。</footer>
 </div>
 
 <!-- ===== 戦闘コア（DOMに依存しない。test.html からも読み込む） ===== -->
 <script id="core">
-const VERSION = 'v0.6.0';
+const VERSION = 'v0.6.1';
 const PREF_NAME = '福岡県';
 
 // 市町村データ：総務省 住民基本台帳（2026-01-01）＋国土地理院 面積（2026-04-01）。tools/pref_build.py で生成
@@ -225,8 +237,8 @@ const SHIELD_TICKS = 8 * TPS;   // シールド有効期限 8ゲーム秒
 // 配置：自治体A＝奥の段(far)、自治体B＝手前の段(near)。それぞれ前衛(front)か後衛(rear)を選ぶ
 const ROWS = ['far', 'near'];
 const BASE_POS = {
-  far:  { rear: { x: 150, y: 270, scale: .85 }, front: { x: 320, y: 270, scale: .85 } },
-  near: { rear: { x: 130, y: 440, scale: 1.15 }, front: { x: 330, y: 440, scale: 1.15 } }
+  far:  { rear: { x: 165, y: 270, scale: .85 }, front: { x: 330, y: 270, scale: .85 } },
+  near: { rear: { x: 160, y: 440, scale: 1.15 }, front: { x: 345, y: 440, scale: 1.15 } }
 };
 const POS = {};
 for (const side of ['blue', 'red']) {
@@ -553,7 +565,7 @@ let screen = 'title', pool = [], picked = [], rivals = [], mySlots = ['front', '
 let battle = null, view = null, paused = false, loopToken = 0;
 let playbackSpeed = .85;   // アプリ起動時に一度だけ初期化
 
-document.title = '市町村ドラフトバトル ' + VERSION;
+document.title = '自治体タッグバトル ' + VERSION;
 $('#verchip').textContent = `β ${VERSION} · 2対2`;
 $('#prefname').textContent = PREF_NAME;
 
@@ -571,7 +583,7 @@ function teamLine(list, slots, red) {
 
 function render() {
   if (screen === 'title') {
-    app.innerHTML = `<section class="hero"><h2>まちの数字が、必殺技になる。</h2><p>${PREF_NAME}の${ALL.length}市町村から2体を選び、それぞれ前衛か後衛かを決める。<br>都会・郊外・田舎の三すくみ。戦闘は完全オート。</p><button class="primary" id="new">ドラフト開始 →</button></section>`;
+    app.innerHTML = `<section class="hero"><img class="emblem" src="assets/logo-emblem.webp?v=0.6.1" alt="自治体タッグバトルの紋章"><h1 class="gametitle">自治体タッグバトル<small>${PREF_NAME}編</small></h1><h2>まちの数字が、必殺技になる。</h2><p>${PREF_NAME}の${ALL.length}市町村から2体を選び、それぞれ前衛か後衛かを決める。<br>都会・郊外・田舎の三すくみ。戦闘は完全オート。</p><button class="primary" id="new">ドラフト開始 →</button></section>`;
     $('#new').onclick = newGame;
   }
   if (screen === 'draft') {
@@ -818,7 +830,7 @@ function draw() {
   for (let i = 0; i <= 12; i++) { ctx.beginPath(); ctx.moveTo(215 + i * 47.5, 177); ctx.lineTo(-80 + i * 96.7, H); ctx.stroke(); }
   for (const y of [194, 222, 258, 306, 370, 452, 552]) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
   ctx.restore();
-  ctx.fillStyle = '#dff0ff'; ctx.textAlign = 'center'; ctx.font = 'bold 21px system-ui';
+  ctx.fillStyle = '#dff0ff'; ctx.textAlign = 'center'; ctx.font = 'bold 21px DotGothic16, system-ui';
   ctx.fillText('味方', 108, 43); ctx.fillText('敵', 892, 43);
   ctx.fillStyle = '#ffe0a0'; ctx.fillText(Math.max(0, 50 - v.dispTick / TPS).toFixed(1) + '秒', 500, 43);
 
@@ -848,7 +860,7 @@ function draw() {
     ctx.fillStyle = '#183447'; ctx.beginPath();
     ctx.arc(ex - eg, ey, er, 0, Math.PI * 2); ctx.arc(ex + eg, ey, er, 0, Math.PI * 2); ctx.fill();
     // 名前（属性アイコンつき）
-    ctx.textAlign = 'center'; ctx.font = `bold ${Math.round(24 * scale)}px system-ui`; ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center'; ctx.font = `bold ${Math.round(24 * scale)}px DotGothic16, system-ui`; ctx.fillStyle = '#fff';
     ctx.shadowColor = '#142338'; ctx.shadowBlur = 4;
     ctx.fillText(`${ATTR_ICON[u.d.attr]}${u.d.name}`, x, Math.min(H - 8, y + sh.maxY / 100 * R + 28 * scale)); ctx.shadowBlur = 0;
     // HPバー
@@ -881,7 +893,7 @@ function draw() {
       const g = Math.min(1, (f - a.applyAt) / Math.max(.01, 1 - a.applyAt));
       ctx.globalAlpha = Math.max(0, 1 - g * .8); ctx.strokeStyle = color; ctx.lineWidth = 5;
       ctx.beginPath(); ctx.arc(t.x, t.y, 24 + g * 36, 0, Math.PI * 2); ctx.stroke();
-      ctx.globalAlpha = 1; ctx.fillStyle = '#ffe7b2'; ctx.textAlign = 'center'; ctx.font = 'bold 34px system-ui';
+      ctx.globalAlpha = 1; ctx.fillStyle = '#ffe7b2'; ctx.textAlign = 'center'; ctx.font = 'bold 34px DotGothic16, system-ui';
       ctx.shadowColor = '#142338'; ctx.shadowBlur = 5;
       const txt = ev.type === 'damage' ? `-${ev.amount}` + (ev.shieldAbsorbed ? `（盾${ev.shieldAbsorbed}）` : '') : ev.type === 'heal' ? `+${ev.amount}` : `盾+${ev.amount}`;
       // 数字は受け手のHPバーより上に出す
@@ -889,13 +901,13 @@ function draw() {
       const ty = Math.max(70, t.y + tu.d.shape.minY / 100 * tR - 32 * t.scale - g * 14);
       ctx.fillText(txt, t.x, ty);
       if (ev.affinity) {   // 相性の表示
-        ctx.font = 'bold 22px system-ui'; ctx.fillStyle = ev.affinity === 'adv' ? '#ffb15c' : '#a9b8c8';
+        ctx.font = 'bold 22px DotGothic16, system-ui'; ctx.fillStyle = ev.affinity === 'adv' ? '#ffb15c' : '#a9b8c8';
         ctx.fillText(ev.affinity === 'adv' ? '有利！' : '不利…', t.x, ty - 32);
       }
     }
     if (ev.special) {   // 必殺技名
       ctx.globalAlpha = Math.min(1, f * 5) * (1 - Math.max(0, f - .8) * 5); ctx.fillStyle = '#fff4de'; ctx.textAlign = 'center';
-      ctx.font = 'bold 28px system-ui'; ctx.shadowColor = '#142338'; ctx.shadowBlur = 6;
+      ctx.font = 'bold 28px DotGothic16, system-ui'; ctx.shadowColor = '#142338'; ctx.shadowBlur = 6;
       ctx.fillText('★ ' + SKILLS_BY_ID[ev.skillId].displayName, s.x, Math.max(30, s.y - 120 * s.scale));
     }
     ctx.restore();
@@ -906,14 +918,14 @@ function draw() {
     const p = ev.koPosition;
     ctx.save(); ctx.globalAlpha = (1 - f) * .8; ctx.strokeStyle = '#ffe5c2'; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.arc(p.x, p.y, (24 + f * 50) * p.scale, 0, Math.PI * 2); ctx.stroke();
-    ctx.font = 'bold 28px system-ui'; ctx.fillStyle = '#fff4de'; ctx.textAlign = 'center';
+    ctx.font = 'bold 28px DotGothic16, system-ui'; ctx.fillStyle = '#fff4de'; ctx.textAlign = 'center';
     ctx.fillText('KO', p.x, p.y - 60 - f * 22); ctx.restore();
   }
 
   // 決着表示
   if (v.victory) {
     ctx.save(); ctx.fillStyle = 'rgba(10,18,30,.55)'; ctx.fillRect(0, H / 2 - 50, W, 100);
-    ctx.fillStyle = '#f4d28e'; ctx.textAlign = 'center'; ctx.font = 'bold 54px system-ui';
+    ctx.fillStyle = '#f4d28e'; ctx.textAlign = 'center'; ctx.font = 'bold 54px DotGothic16, system-ui';
     ctx.fillText(b.winner === 'draw' ? '引き分け' : '決着！', 500, H / 2 + 18); ctx.restore();
   }
 }
