@@ -272,6 +272,41 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
     return `${n}戦 完了（味方${wins.blue}・相手${wins.red}・分${wins.draw}）`;
   });
 
+  test('T27', '60市町村すべてに形があり、座標が範囲内で目が本土の内側', () => {
+    const inside = (x, y, r) => {
+      let c = false;
+      for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) {
+        const [x1, y1, x2, y2] = [r[i], r[i + 1], r[j], r[j + 1]];
+        if ((y1 > y) !== (y2 > y) && x < (x2 - x1) * (y - y1) / (y2 - y1) + x1) c = !c;
+      }
+      return c;
+    };
+    let rings = 0;
+    for (const u of C.ALL) {
+      const sh = u.shape;
+      assert(sh && sh.r.length >= 1, `${u.name} の形がない`);
+      for (const r of sh.r) {
+        assert(r.length >= 6 && r.length % 2 === 0, `${u.name} の輪が不正`);
+        assert(r.every(v => Number.isInteger(v) && Math.abs(v) <= 101), `${u.name} の座標が範囲外`);
+      }
+      assert(inside(sh.e[0], sh.e[1], sh.r[0]), `${u.name} の目が本土の外`);
+      assert(u.size >= .72 && u.size <= 1.32, `${u.name} の大きさ係数 ${u.size}`);
+      rings += sh.r.length;
+    }
+    const by = n => C.ALL.find(u => u.name === n).size;
+    assert(by('北九州市') > by('久留米市') && by('久留米市') > by('春日市') && by('春日市') > by('吉富町'), '面積順に大きさが並ばない');
+    return `60件・輪 ${rings}個（島を含む）`;
+  });
+
+  // 形の一覧（目視確認用）
+  const gal = document.createElement('div');
+  gal.innerHTML = '<h2>形の一覧（大きさ係数つき）</h2><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">' +
+    C.ALL.map(u => `<div style="background:#1b2d42;border-radius:8px;padding:6px;text-align:center;font-size:12px">${C.shapeSvg(u, 'g')}<br>${C.esc(u.name)} ×${u.size}</div>`).join('') + '</div>';
+  document.body.appendChild(gal);
+  const st = document.createElement('style');
+  st.textContent = '.g{width:96px;height:96px}.g path{fill:#8acde0;stroke:#edf7ff;stroke-width:1.5;vector-effect:non-scaling-stroke}';
+  document.head.appendChild(st);
+
   const rows = document.getElementById('rows');
   rows.innerHTML = results.map(r => `<tr><td>${r.id}</td><td>${C.esc(r.name)}</td><td class="${r.ok ? 'ok' : 'ng'}">${r.ok ? '合格' : '不合格'}</td><td>${C.esc(r.detail)}</td></tr>`).join('');
   const pass = results.filter(r => r.ok).length;
