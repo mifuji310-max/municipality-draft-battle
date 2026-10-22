@@ -1,6 +1,6 @@
 # 市町村の形データを作るスクリプト
 # 使い方: python build_shapes.py N03-21_40_210101.json shapes.json
-# 入力: https://github.com/smartnews-smri/japan-topography の data/municipality/geojson/s0010/N03-21_40_210101.json
+# 入力: https://github.com/smartnews-smri/japan-topography の data/municipality/geojson/s0010/N03-21_<県コード>_210101.json
 # 出典: 国土数値情報（行政区域データ）（国土交通省）
 import json,sys,math,collections
 src,out=sys.argv[1],sys.argv[2]
@@ -19,8 +19,8 @@ def centroid(r):
 groups=collections.defaultdict(list)
 for f in g['features']:
   code=f['properties']['N03_007']
-  if code.startswith('4010'): code='40100'
-  if code.startswith('4013'): code='40130'
+  # 政令市の区（市区町村コードの下3桁が101〜199）は市のコード（下1桁を0）にまとめる
+  if 100 < int(code[2:5]) < 200: code=code[:4]+'0'
   geom=f['geometry'];polys=geom['coordinates'] if geom['type']=='MultiPolygon' else [geom['coordinates']]
   for poly in polys: groups[code].append([proj(p) for p in poly[0]])  # 外周のみ
 def dissolve(rings):

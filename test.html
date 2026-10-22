@@ -249,7 +249,7 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
     return `360戦 完了（味方${wins.blue}・相手${wins.red}・分${wins.draw}）`;
   });
 
-  test('T27', '60市町村すべてに形があり、座標が範囲内で目が本土の内側', () => {
+  test('T27', '全県の市町村すべてに形があり、座標が範囲内で目が本土の内側', () => {
     const inside = (x, y, r) => {
       let c = false;
       for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) {
@@ -259,7 +259,8 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
       return c;
     };
     let rings = 0;
-    for (const u of C.ALL) {
+    const everyone = Object.values(C.ALL_BY_PREF).flat();
+    for (const u of everyone) {
       const sh = u.shape;
       assert(sh && sh.r.length >= 1, `${u.name} の形がない`);
       for (const r of sh.r) assert(r.every(v => Number.isInteger(v) && Math.abs(v) <= 101), `${u.name} の座標が範囲外`);
@@ -267,18 +268,23 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
       assert(u.size >= .72 && u.size <= 1.32, `${u.name} の大きさ係数 ${u.size}`);
       rings += sh.r.length;
     }
-    return `${C.ALL.length}件・輪 ${rings}個（島を含む）`;
+    return `${everyone.length}件（${Object.values(C.PREFS).map(p => p.name + p.data.length).join('・')}）・輪 ${rings}個（島を含む）`;
   });
 
-  test('T28', '属性：人口密度の順位で3等分（福岡県は20・20・20）', () => {
+  test('T28', '属性：人口密度の順位で県ごとに3等分（福岡20・20・20、熊本15・15・15）', () => {
+    const F = C.ALL_BY_PREF['40'];
     const cnt = { 都会: 0, 郊外: 0, 田舎: 0 };
-    for (const u of C.ALL) cnt[u.attr]++;
+    for (const u of F) cnt[u.attr]++;
     assert(cnt.都会 === 20 && cnt.郊外 === 20 && cnt.田舎 === 20, JSON.stringify(cnt));
-    const ranks = C.ALL.map(u => u.densityRank).sort((a, b) => a - b);
+    const ranks = F.map(u => u.densityRank).sort((a, b) => a - b);
     assert(ranks.every((r, i) => r === i + 1), '県内順位が1〜60になっていない');
-    const minCity = Math.min(...C.ALL.filter(u => u.attr === '都会').map(u => u.density));
-    const maxSub = Math.max(...C.ALL.filter(u => u.attr === '郊外').map(u => u.density));
+    const minCity = Math.min(...F.filter(u => u.attr === '都会').map(u => u.density));
+    const maxSub = Math.max(...F.filter(u => u.attr === '郊外').map(u => u.density));
     assert(minCity > maxSub, '都会と郊外の境目が逆転');
+    // 熊本県（45）も1/3ずつ
+    const ck = { 都会: 0, 郊外: 0, 田舎: 0 };
+    for (const u of C.ALL_BY_PREF['43']) ck[u.attr]++;
+    assert(ck.都会 === 15 && ck.郊外 === 15 && ck.田舎 === 15, '熊本 ' + JSON.stringify(ck));
     // 他県の数（45）でも1/3ずつ
     const fake = Array.from({ length: 45 }, (_, i) => ({ density: i * 10 + 1 }));
     const c2 = { 都会: 0, 郊外: 0, 田舎: 0 };
@@ -342,10 +348,44 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
     return '8座標・4パターン';
   });
 
+  test('T33', '熊本県：データの範囲と、熊本の自治体どうしの戦闘', () => {
+    const K = C.ALL_BY_PREF['43'];
+    assert(K.length === 45, '熊本の件数 ' + K.length);
+    assert(K.every(u => u.pref === '43' && u.population > 0 && u.area_km2 > 0 && u.st.hp > 0), 'データ不正');
+    const k = n => K.find(u => u.name === n);
+    assert(k('熊本市').attr === '都会' && k('五木村').attr === '田舎', '属性が想定と違う');
+    assert(k('天草市').size === 1.32 || k('天草市').size > 1.3, '天草市の大きさ ' + k('天草市').size);
+    let n = 0;
+    for (let s = 1; s <= 50; s++) {
+      const p = C.shuffleWith(K, (() => { const r = { r: s }; return () => C.rng(r); })()).slice(0, 4);
+      const b = C.runToEnd(C.createBattle(team(p[0], 'front', p[1], 'rear'), team(p[2], 'rear', p[3], 'front'), s));
+      assert(b.done, '未完了'); n++;
+    }
+    return `45件・${n}戦 完了`;
+  });
+
+  test('T34', 'ひらがな検索：読みがな・カタカナ・漢字で探せる。全105件に読みがながある', () => {
+    assert(C.ALL.length === 105 && C.ALL.every(u => /^[ぁ-ゖー]+$/.test(u.kana)), '読みがなが欠けている');
+    assert(new Set(C.ALL.map(u => u.name)).size === C.ALL.length, '県をまたいで同じ名前がある');
+    const names = q => C.searchTowns(C.ALL, q).map(u => u.name);
+    assert(names('くるめ')[0] === '久留米市', 'くるめ');
+    assert(names('クマモト')[0] === '熊本市', 'カタカナ');
+    assert(names('のおがた')[0] === '直方市', '難読地名');
+    const ama = names('天草');
+    assert(ama.includes('天草市') && ama.includes('上天草市') && ama.length === 2, '漢字 ' + ama);
+    assert(names('あまくさ')[0] === '天草市', '前方一致を先に');
+    assert(names('').length === 0 && names(' ').length === 0, '空欄で全件出る');
+    assert(names('ふくおか').includes('福岡市'), 'ふくおか');
+    assert(!names('くま').includes('苓北町'), '「〜まち」にまたがって一致した');
+    const aso = names('あそ');
+    assert(aso[0] === '阿蘇市' && aso.includes('南阿蘇村'), '途中一致 ' + aso);
+    return `くるめ→${names('くるめ')[0]}／あまくさ→${names('あまくさ').join('・')}`;
+  });
+
   // 形の一覧（目視確認用）
   const gal = document.createElement('div');
   gal.innerHTML = '<h2>形の一覧（属性・大きさ係数つき）</h2><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">' +
-    C.ALL.map(u => `<div style="background:#1b2d42;border-radius:8px;padding:6px;text-align:center;font-size:12px">${C.shapeSvg(u, 'g')}<br>${C.esc(u.name)} ×${u.size}<br>${u.attr}（密度${u.densityRank}位）</div>`).join('') + '</div>';
+    Object.values(C.ALL_BY_PREF).flat().map(u => `<div style="background:#1b2d42;border-radius:8px;padding:6px;text-align:center;font-size:12px">${C.shapeSvg(u, 'g')}<br>${C.esc(u.name)} ×${u.size}<br>${u.attr}（密度${u.densityRank}位）</div>`).join('') + '</div>';
   document.body.appendChild(gal);
   const st = document.createElement('style');
   st.textContent = '.g{width:96px;height:96px}.g path{fill:#8acde0;stroke:#edf7ff;stroke-width:1.5;vector-effect:non-scaling-stroke}';

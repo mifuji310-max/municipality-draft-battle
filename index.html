@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>自治体タッグバトル v0.6.1</title>
-<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=0.6.1">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=0.6.1">
-<link rel="manifest" href="manifest.webmanifest?v=0.6.1">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=0.7.0">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=0.7.0">
+<link rel="manifest" href="manifest.webmanifest?v=0.7.0">
 <meta name="theme-color" content="#0b1030">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -72,6 +72,12 @@ select,input{background:#111a55;color:white;border:2px solid #c9d4f2;border-radi
 .slotbtns button{flex:1;padding:8px}
 .slotbtns button.on{background:#e2bd77;color:#172438;font-weight:800;border-color:#e2bd77}
 .legend{font-size:13px;color:#c9d8e6}
+.search{display:flex;align-items:center;gap:8px;flex:1 1 260px;flex-wrap:wrap}
+.search input{flex:1;min-width:200px;font-size:16px}
+.hits{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.hit{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;text-align:left}
+.hit small{display:block;font-size:11px;margin-left:4px}
+.hit.on{background:linear-gradient(180deg,#f6d98d,#d9a94e);color:#1a1d3a}
 @media(max-width:600px){
   .wrap{padding:9px}.panel{padding:10px}.town{min-height:120px}
   .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -82,79 +88,127 @@ select,input{background:#111a55;color:white;border:2px solid #c9d4f2;border-radi
 </head>
 <body>
 <div class="wrap">
-  <header><h1><img src="assets/icon-192.png?v=0.6.1" alt="">自治体タッグバトル <small id="prefname"></small></h1><span class="chip" id="verchip">β · 2対2</span></header>
+  <header><h1><img src="assets/icon-192.png?v=0.7.0" alt="">自治体タッグバトル <small id="prefname"></small></h1><span class="chip" id="verchip">β · 2対2</span></header>
   <main id="app"></main>
-  <footer class="fine">実データ：人口・年齢構成は総務省「住民基本台帳に基づく人口、人口動態及び世帯数」（2026年1月1日）、面積は国土地理院「全国都道府県市区町村別面積調」（2026年4月1日）。人口密度はこの2つから計算。属性（都会・郊外・田舎）は県内の人口密度の順位で3等分したもの。能力値・必殺技への変換はゲーム用の仮設定。輪郭：「国土数値情報（行政区域データ）」（国土交通省）を加工して作成（スマートニュース メディア研究所 japan-topography の簡素化版を利用。区は市単位に結合、遠い離島は近くに寄せて表示、大きさは面積を圧縮した目安）。参考サイト「地元の最強」の輪郭衝突という着想と、共有画像のJRPG風の奥行き表現を参考にした独立した試作。参考サイトのコード・素材は使用していません。アイコン・タイトルの紋章は画像生成AIで作成。文字フォント：DotGothic16（SIL Open Font License）。</footer>
+  <footer class="fine">実データ：人口・年齢構成は総務省「住民基本台帳に基づく人口、人口動態及び世帯数」（2026年1月1日）、面積は国土地理院「全国都道府県市区町村別面積調」（2026年4月1日）。人口密度はこの2つから計算。属性（都会・郊外・田舎）は県内の人口密度の順位で3等分したもの。能力値・必殺技への変換はゲーム用の仮設定。輪郭：「国土数値情報（行政区域データ）」（国土交通省）を加工して作成（スマートニュース メディア研究所 japan-topography の簡素化版を利用。区は市単位に結合、遠い離島は近くに寄せて表示、大きさは面積を圧縮した目安）。参考サイト「地元の最強」の輪郭衝突という着想と、共有画像のJRPG風の奥行き表現を参考にした独立した試作。参考サイトのコード・素材は使用していません。アイコン・タイトルの紋章・戦闘背景は画像生成AIで作成。文字フォント：DotGothic16（SIL Open Font License）。</footer>
 </div>
 
 <!-- ===== 戦闘コア（DOMに依存しない。test.html からも読み込む） ===== -->
 <script id="core">
-const VERSION = 'v0.6.1';
-const PREF_NAME = '福岡県';
+const VERSION = 'v0.7.0';
 
 // 市町村データ：総務省 住民基本台帳（2026-01-01）＋国土地理院 面積（2026-04-01）。tools/pref_build.py で生成
-const DATA = [
-  {"code": "40100", "name": "北九州市", "population": 905635, "young_pct": 11.24, "work_pct": 57.15, "elder_pct": 31.6, "age75_pct": 18.94, "age75_of65_pct": 59.93, "area_km2": 492.3, "density": 1839.6},
-  {"code": "40130", "name": "福岡市", "population": 1620853, "young_pct": 12.36, "work_pct": 65.29, "elder_pct": 22.35, "age75_pct": 12.39, "age75_of65_pct": 55.43, "area_km2": 343.47, "density": 4719.05},
-  {"code": "40202", "name": "大牟田市", "population": 102782, "young_pct": 10.21, "work_pct": 51.29, "elder_pct": 38.5, "age75_pct": 22.86, "age75_of65_pct": 59.37, "area_km2": 81.45, "density": 1261.9},
-  {"code": "40203", "name": "久留米市", "population": 299047, "young_pct": 12.97, "work_pct": 58.65, "elder_pct": 28.39, "age75_pct": 16.12, "age75_of65_pct": 56.8, "area_km2": 229.96, "density": 1300.43},
-  {"code": "40204", "name": "直方市", "population": 54154, "young_pct": 12.01, "work_pct": 54.65, "elder_pct": 33.34, "age75_pct": 19.93, "age75_of65_pct": 59.78, "area_km2": 61.76, "density": 876.85},
-  {"code": "40205", "name": "飯塚市", "population": 123413, "young_pct": 12.21, "work_pct": 55.45, "elder_pct": 32.34, "age75_pct": 18.59, "age75_of65_pct": 57.48, "area_km2": 213.96, "density": 576.8},
-  {"code": "40206", "name": "田川市", "population": 44065, "young_pct": 11.53, "work_pct": 53.88, "elder_pct": 34.59, "age75_pct": 20.37, "age75_of65_pct": 58.89, "area_km2": 54.55, "density": 807.79},
-  {"code": "40207", "name": "柳川市", "population": 60734, "young_pct": 10.92, "work_pct": 53.64, "elder_pct": 35.45, "age75_pct": 20.63, "age75_of65_pct": 58.19, "area_km2": 77.15, "density": 787.22},
-  {"code": "40210", "name": "八女市", "population": 58877, "young_pct": 11.29, "work_pct": 51.73, "elder_pct": 36.98, "age75_pct": 21.25, "age75_of65_pct": 57.46, "area_km2": 482.44, "density": 122.04},
-  {"code": "40211", "name": "筑後市", "population": 48894, "young_pct": 13.78, "work_pct": 57.69, "elder_pct": 28.53, "age75_pct": 16.04, "age75_of65_pct": 56.24, "area_km2": 41.78, "density": 1170.27},
-  {"code": "40212", "name": "大川市", "population": 30531, "young_pct": 9.78, "work_pct": 53.01, "elder_pct": 37.2, "age75_pct": 22.53, "age75_of65_pct": 60.57, "area_km2": 33.62, "density": 908.12},
-  {"code": "40213", "name": "行橋市", "population": 71813, "young_pct": 12.49, "work_pct": 56.96, "elder_pct": 30.55, "age75_pct": 17.74, "age75_of65_pct": 58.08, "area_km2": 69.95, "density": 1026.63},
-  {"code": "40214", "name": "豊前市", "population": 22956, "young_pct": 10.24, "work_pct": 51.76, "elder_pct": 38.01, "age75_pct": 22.98, "age75_of65_pct": 60.47, "area_km2": 111.01, "density": 206.79},
-  {"code": "40215", "name": "中間市", "population": 38626, "young_pct": 10.31, "work_pct": 51.48, "elder_pct": 38.21, "age75_pct": 23.63, "age75_of65_pct": 61.85, "area_km2": 15.96, "density": 2420.18},
-  {"code": "40216", "name": "小郡市", "population": 59685, "young_pct": 13.06, "work_pct": 58.26, "elder_pct": 28.68, "age75_pct": 16.48, "age75_of65_pct": 57.47, "area_km2": 45.51, "density": 1311.47},
-  {"code": "40217", "name": "筑紫野市", "population": 106390, "young_pct": 13.56, "work_pct": 59.5, "elder_pct": 26.94, "age75_pct": 14.52, "age75_of65_pct": 53.88, "area_km2": 87.73, "density": 1212.7},
-  {"code": "40218", "name": "春日市", "population": 111754, "young_pct": 13.77, "work_pct": 62.02, "elder_pct": 24.21, "age75_pct": 13.03, "age75_of65_pct": 53.84, "area_km2": 14.15, "density": 7897.81},
-  {"code": "40219", "name": "大野城市", "population": 104025, "young_pct": 14.89, "work_pct": 62.53, "elder_pct": 22.58, "age75_pct": 12.46, "age75_of65_pct": 55.2, "area_km2": 26.89, "density": 3868.54},
-  {"code": "40220", "name": "宗像市", "population": 96765, "young_pct": 13.24, "work_pct": 55.91, "elder_pct": 30.85, "age75_pct": 17.38, "age75_of65_pct": 56.32, "area_km2": 119.94, "density": 806.78},
-  {"code": "40221", "name": "太宰府市", "population": 71580, "young_pct": 13.18, "work_pct": 58.69, "elder_pct": 28.13, "age75_pct": 17.16, "age75_of65_pct": 60.99, "area_km2": 29.6, "density": 2418.24},
-  {"code": "40223", "name": "古賀市", "population": 58957, "young_pct": 13.26, "work_pct": 57.56, "elder_pct": 29.18, "age75_pct": 16.1, "age75_of65_pct": 55.16, "area_km2": 42.07, "density": 1401.4},
-  {"code": "40224", "name": "福津市", "population": 69535, "young_pct": 16.48, "work_pct": 56.26, "elder_pct": 27.26, "age75_pct": 15.92, "age75_of65_pct": 58.39, "area_km2": 52.76, "density": 1317.95},
-  {"code": "40225", "name": "うきは市", "population": 26915, "young_pct": 11.17, "work_pct": 52.13, "elder_pct": 36.7, "age75_pct": 21.34, "age75_of65_pct": 58.16, "area_km2": 117.46, "density": 229.14},
-  {"code": "40226", "name": "宮若市", "population": 25563, "young_pct": 10.83, "work_pct": 52.74, "elder_pct": 36.43, "age75_pct": 20.92, "age75_of65_pct": 57.43, "area_km2": 139.99, "density": 182.61},
-  {"code": "40227", "name": "嘉麻市", "population": 33355, "young_pct": 10.08, "work_pct": 48.16, "elder_pct": 41.76, "age75_pct": 24.27, "age75_of65_pct": 58.12, "area_km2": 135.11, "density": 246.87},
-  {"code": "40228", "name": "朝倉市", "population": 49510, "young_pct": 11.12, "work_pct": 52.75, "elder_pct": 36.13, "age75_pct": 20.82, "age75_of65_pct": 57.61, "area_km2": 246.71, "density": 200.68},
-  {"code": "40229", "name": "みやま市", "population": 33609, "young_pct": 10.14, "work_pct": 49.75, "elder_pct": 40.12, "age75_pct": 23.15, "age75_of65_pct": 57.7, "area_km2": 105.21, "density": 319.45},
-  {"code": "40230", "name": "糸島市", "population": 104141, "young_pct": 13.46, "work_pct": 56.07, "elder_pct": 30.48, "age75_pct": 16.89, "age75_of65_pct": 55.43, "area_km2": 215.69, "density": 482.83},
-  {"code": "40231", "name": "那珂川市", "population": 49221, "young_pct": 14.03, "work_pct": 60.66, "elder_pct": 25.31, "age75_pct": 13.94, "age75_of65_pct": 55.06, "area_km2": 74.95, "density": 656.72},
-  {"code": "40341", "name": "宇美町", "population": 36722, "young_pct": 13.5, "work_pct": 56.8, "elder_pct": 29.7, "age75_pct": 15.45, "age75_of65_pct": 52.0, "area_km2": 30.21, "density": 1215.56},
-  {"code": "40342", "name": "篠栗町", "population": 31274, "young_pct": 13.72, "work_pct": 61.06, "elder_pct": 25.22, "age75_pct": 14.25, "age75_of65_pct": 56.51, "area_km2": 38.93, "density": 803.34},
-  {"code": "40343", "name": "志免町", "population": 46274, "young_pct": 14.17, "work_pct": 61.7, "elder_pct": 24.13, "age75_pct": 14.09, "age75_of65_pct": 58.39, "area_km2": 8.69, "density": 5324.97},
-  {"code": "40344", "name": "須恵町", "population": 29748, "young_pct": 15.63, "work_pct": 58.37, "elder_pct": 26.01, "age75_pct": 15.5, "age75_of65_pct": 59.59, "area_km2": 16.31, "density": 1823.91},
-  {"code": "40345", "name": "新宮町", "population": 33176, "young_pct": 16.87, "work_pct": 63.2, "elder_pct": 19.93, "age75_pct": 10.37, "age75_of65_pct": 52.03, "area_km2": 18.93, "density": 1752.56},
-  {"code": "40348", "name": "久山町", "population": 9354, "young_pct": 16.36, "work_pct": 56.8, "elder_pct": 26.84, "age75_pct": 15.98, "age75_of65_pct": 59.54, "area_km2": 37.44, "density": 249.84},
-  {"code": "40349", "name": "粕屋町", "population": 48404, "young_pct": 15.24, "work_pct": 66.5, "elder_pct": 18.27, "age75_pct": 10.02, "age75_of65_pct": 54.88, "area_km2": 14.13, "density": 3425.62},
-  {"code": "40381", "name": "芦屋町", "population": 12486, "young_pct": 11.51, "work_pct": 55.25, "elder_pct": 33.25, "age75_pct": 20.3, "age75_of65_pct": 61.07, "area_km2": 11.58, "density": 1078.24},
-  {"code": "40382", "name": "水巻町", "population": 27398, "young_pct": 12.18, "work_pct": 54.11, "elder_pct": 33.72, "age75_pct": 19.24, "age75_of65_pct": 57.07, "area_km2": 11.01, "density": 2488.47},
-  {"code": "40383", "name": "岡垣町", "population": 31081, "young_pct": 12.42, "work_pct": 54.01, "elder_pct": 33.58, "age75_pct": 20.02, "age75_of65_pct": 59.62, "area_km2": 48.64, "density": 639.0},
-  {"code": "40384", "name": "遠賀町", "population": 18807, "young_pct": 11.82, "work_pct": 52.87, "elder_pct": 35.31, "age75_pct": 20.79, "age75_of65_pct": 58.89, "area_km2": 22.15, "density": 849.07},
-  {"code": "40401", "name": "小竹町", "population": 6798, "young_pct": 7.28, "work_pct": 49.41, "elder_pct": 43.31, "age75_pct": 26.51, "age75_of65_pct": 61.21, "area_km2": 14.28, "density": 476.05},
-  {"code": "40402", "name": "鞍手町", "population": 14591, "young_pct": 9.88, "work_pct": 49.74, "elder_pct": 40.38, "age75_pct": 23.95, "age75_of65_pct": 59.3, "area_km2": 35.6, "density": 409.86},
-  {"code": "40421", "name": "桂川町", "population": 12669, "young_pct": 11.18, "work_pct": 52.35, "elder_pct": 36.47, "age75_pct": 20.27, "age75_of65_pct": 55.58, "area_km2": 20.14, "density": 629.05},
-  {"code": "40447", "name": "筑前町", "population": 30993, "young_pct": 14.17, "work_pct": 55.94, "elder_pct": 29.89, "age75_pct": 16.7, "age75_of65_pct": 55.88, "area_km2": 67.1, "density": 461.89},
-  {"code": "40448", "name": "東峰村", "population": 1721, "young_pct": 8.66, "work_pct": 42.71, "elder_pct": 48.63, "age75_pct": 27.31, "age75_of65_pct": 56.15, "area_km2": 51.97, "density": 33.12},
-  {"code": "40503", "name": "大刀洗町", "population": 16170, "young_pct": 14.93, "work_pct": 56.9, "elder_pct": 28.18, "age75_pct": 15.78, "age75_of65_pct": 56.01, "area_km2": 22.84, "density": 707.97},
-  {"code": "40522", "name": "大木町", "population": 13549, "young_pct": 13.41, "work_pct": 56.35, "elder_pct": 30.24, "age75_pct": 16.94, "age75_of65_pct": 56.02, "area_km2": 18.44, "density": 734.76},
-  {"code": "40544", "name": "広川町", "population": 19051, "young_pct": 12.75, "work_pct": 56.84, "elder_pct": 30.41, "age75_pct": 17.0, "age75_of65_pct": 55.91, "area_km2": 37.94, "density": 502.13},
-  {"code": "40601", "name": "香春町", "population": 9808, "young_pct": 10.13, "work_pct": 46.96, "elder_pct": 42.9, "age75_pct": 25.67, "age75_of65_pct": 59.84, "area_km2": 44.5, "density": 220.4},
-  {"code": "40602", "name": "添田町", "population": 8086, "young_pct": 7.99, "work_pct": 45.91, "elder_pct": 46.1, "age75_pct": 27.42, "age75_of65_pct": 59.47, "area_km2": 132.2, "density": 61.16},
-  {"code": "40604", "name": "糸田町", "population": 8120, "young_pct": 11.56, "work_pct": 49.99, "elder_pct": 38.45, "age75_pct": 22.7, "age75_of65_pct": 59.03, "area_km2": 8.04, "density": 1009.95},
-  {"code": "40605", "name": "川崎町", "population": 14499, "young_pct": 10.0, "work_pct": 49.48, "elder_pct": 40.52, "age75_pct": 23.25, "age75_of65_pct": 57.38, "area_km2": 36.14, "density": 401.19},
-  {"code": "40608", "name": "大任町", "population": 4948, "young_pct": 13.99, "work_pct": 48.59, "elder_pct": 37.43, "age75_pct": 22.23, "age75_of65_pct": 59.4, "area_km2": 14.26, "density": 346.98},
-  {"code": "40609", "name": "赤村", "population": 2754, "young_pct": 11.51, "work_pct": 46.37, "elder_pct": 42.12, "age75_pct": 23.78, "age75_of65_pct": 56.47, "area_km2": 31.98, "density": 86.12},
-  {"code": "40610", "name": "福智町", "population": 20589, "young_pct": 11.65, "work_pct": 51.31, "elder_pct": 37.03, "age75_pct": 21.2, "age75_of65_pct": 57.25, "area_km2": 42.06, "density": 489.51},
-  {"code": "40621", "name": "苅田町", "population": 37447, "young_pct": 13.31, "work_pct": 61.13, "elder_pct": 25.56, "age75_pct": 14.28, "age75_of65_pct": 55.86, "area_km2": 49.52, "density": 756.2},
-  {"code": "40625", "name": "みやこ町", "population": 17339, "young_pct": 9.25, "work_pct": 47.7, "elder_pct": 43.05, "age75_pct": 26.4, "age75_of65_pct": 61.33, "area_km2": 151.34, "density": 114.57},
-  {"code": "40642", "name": "吉富町", "population": 6467, "young_pct": 12.68, "work_pct": 55.91, "elder_pct": 31.41, "age75_pct": 19.25, "age75_of65_pct": 61.3, "area_km2": 5.73, "density": 1128.62},
-  {"code": "40646", "name": "上毛町", "population": 7077, "young_pct": 12.31, "work_pct": 50.29, "elder_pct": 37.4, "age75_pct": 21.52, "age75_of65_pct": 57.54, "area_km2": 62.44, "density": 113.34},
-  {"code": "40647", "name": "築上町", "population": 16071, "young_pct": 9.31, "work_pct": 51.32, "elder_pct": 39.37, "age75_pct": 24.29, "age75_of65_pct": 61.7, "area_km2": 119.57, "density": 134.41}
-];
+const PREFS = {
+  '40': { name: '福岡県', data: [
+    {"code": "40100", "name": "北九州市", "kana": "きたきゅうしゅうし", "population": 905635, "young_pct": 11.24, "work_pct": 57.15, "elder_pct": 31.6, "age75_pct": 18.94, "age75_of65_pct": 59.93, "area_km2": 492.3, "density": 1839.6},
+    {"code": "40130", "name": "福岡市", "kana": "ふくおかし", "population": 1620853, "young_pct": 12.36, "work_pct": 65.29, "elder_pct": 22.35, "age75_pct": 12.39, "age75_of65_pct": 55.43, "area_km2": 343.47, "density": 4719.05},
+    {"code": "40202", "name": "大牟田市", "kana": "おおむたし", "population": 102782, "young_pct": 10.21, "work_pct": 51.29, "elder_pct": 38.5, "age75_pct": 22.86, "age75_of65_pct": 59.37, "area_km2": 81.45, "density": 1261.9},
+    {"code": "40203", "name": "久留米市", "kana": "くるめし", "population": 299047, "young_pct": 12.97, "work_pct": 58.65, "elder_pct": 28.39, "age75_pct": 16.12, "age75_of65_pct": 56.8, "area_km2": 229.96, "density": 1300.43},
+    {"code": "40204", "name": "直方市", "kana": "のおがたし", "population": 54154, "young_pct": 12.01, "work_pct": 54.65, "elder_pct": 33.34, "age75_pct": 19.93, "age75_of65_pct": 59.78, "area_km2": 61.76, "density": 876.85},
+    {"code": "40205", "name": "飯塚市", "kana": "いいづかし", "population": 123413, "young_pct": 12.21, "work_pct": 55.45, "elder_pct": 32.34, "age75_pct": 18.59, "age75_of65_pct": 57.48, "area_km2": 213.96, "density": 576.8},
+    {"code": "40206", "name": "田川市", "kana": "たがわし", "population": 44065, "young_pct": 11.53, "work_pct": 53.88, "elder_pct": 34.59, "age75_pct": 20.37, "age75_of65_pct": 58.89, "area_km2": 54.55, "density": 807.79},
+    {"code": "40207", "name": "柳川市", "kana": "やながわし", "population": 60734, "young_pct": 10.92, "work_pct": 53.64, "elder_pct": 35.45, "age75_pct": 20.63, "age75_of65_pct": 58.19, "area_km2": 77.15, "density": 787.22},
+    {"code": "40210", "name": "八女市", "kana": "やめし", "population": 58877, "young_pct": 11.29, "work_pct": 51.73, "elder_pct": 36.98, "age75_pct": 21.25, "age75_of65_pct": 57.46, "area_km2": 482.44, "density": 122.04},
+    {"code": "40211", "name": "筑後市", "kana": "ちくごし", "population": 48894, "young_pct": 13.78, "work_pct": 57.69, "elder_pct": 28.53, "age75_pct": 16.04, "age75_of65_pct": 56.24, "area_km2": 41.78, "density": 1170.27},
+    {"code": "40212", "name": "大川市", "kana": "おおかわし", "population": 30531, "young_pct": 9.78, "work_pct": 53.01, "elder_pct": 37.2, "age75_pct": 22.53, "age75_of65_pct": 60.57, "area_km2": 33.62, "density": 908.12},
+    {"code": "40213", "name": "行橋市", "kana": "ゆくはしし", "population": 71813, "young_pct": 12.49, "work_pct": 56.96, "elder_pct": 30.55, "age75_pct": 17.74, "age75_of65_pct": 58.08, "area_km2": 69.95, "density": 1026.63},
+    {"code": "40214", "name": "豊前市", "kana": "ぶぜんし", "population": 22956, "young_pct": 10.24, "work_pct": 51.76, "elder_pct": 38.01, "age75_pct": 22.98, "age75_of65_pct": 60.47, "area_km2": 111.01, "density": 206.79},
+    {"code": "40215", "name": "中間市", "kana": "なかまし", "population": 38626, "young_pct": 10.31, "work_pct": 51.48, "elder_pct": 38.21, "age75_pct": 23.63, "age75_of65_pct": 61.85, "area_km2": 15.96, "density": 2420.18},
+    {"code": "40216", "name": "小郡市", "kana": "おごおりし", "population": 59685, "young_pct": 13.06, "work_pct": 58.26, "elder_pct": 28.68, "age75_pct": 16.48, "age75_of65_pct": 57.47, "area_km2": 45.51, "density": 1311.47},
+    {"code": "40217", "name": "筑紫野市", "kana": "ちくしのし", "population": 106390, "young_pct": 13.56, "work_pct": 59.5, "elder_pct": 26.94, "age75_pct": 14.52, "age75_of65_pct": 53.88, "area_km2": 87.73, "density": 1212.7},
+    {"code": "40218", "name": "春日市", "kana": "かすがし", "population": 111754, "young_pct": 13.77, "work_pct": 62.02, "elder_pct": 24.21, "age75_pct": 13.03, "age75_of65_pct": 53.84, "area_km2": 14.15, "density": 7897.81},
+    {"code": "40219", "name": "大野城市", "kana": "おおのじょうし", "population": 104025, "young_pct": 14.89, "work_pct": 62.53, "elder_pct": 22.58, "age75_pct": 12.46, "age75_of65_pct": 55.2, "area_km2": 26.89, "density": 3868.54},
+    {"code": "40220", "name": "宗像市", "kana": "むなかたし", "population": 96765, "young_pct": 13.24, "work_pct": 55.91, "elder_pct": 30.85, "age75_pct": 17.38, "age75_of65_pct": 56.32, "area_km2": 119.94, "density": 806.78},
+    {"code": "40221", "name": "太宰府市", "kana": "だざいふし", "population": 71580, "young_pct": 13.18, "work_pct": 58.69, "elder_pct": 28.13, "age75_pct": 17.16, "age75_of65_pct": 60.99, "area_km2": 29.6, "density": 2418.24},
+    {"code": "40223", "name": "古賀市", "kana": "こがし", "population": 58957, "young_pct": 13.26, "work_pct": 57.56, "elder_pct": 29.18, "age75_pct": 16.1, "age75_of65_pct": 55.16, "area_km2": 42.07, "density": 1401.4},
+    {"code": "40224", "name": "福津市", "kana": "ふくつし", "population": 69535, "young_pct": 16.48, "work_pct": 56.26, "elder_pct": 27.26, "age75_pct": 15.92, "age75_of65_pct": 58.39, "area_km2": 52.76, "density": 1317.95},
+    {"code": "40225", "name": "うきは市", "kana": "うきはし", "population": 26915, "young_pct": 11.17, "work_pct": 52.13, "elder_pct": 36.7, "age75_pct": 21.34, "age75_of65_pct": 58.16, "area_km2": 117.46, "density": 229.14},
+    {"code": "40226", "name": "宮若市", "kana": "みやわかし", "population": 25563, "young_pct": 10.83, "work_pct": 52.74, "elder_pct": 36.43, "age75_pct": 20.92, "age75_of65_pct": 57.43, "area_km2": 139.99, "density": 182.61},
+    {"code": "40227", "name": "嘉麻市", "kana": "かまし", "population": 33355, "young_pct": 10.08, "work_pct": 48.16, "elder_pct": 41.76, "age75_pct": 24.27, "age75_of65_pct": 58.12, "area_km2": 135.11, "density": 246.87},
+    {"code": "40228", "name": "朝倉市", "kana": "あさくらし", "population": 49510, "young_pct": 11.12, "work_pct": 52.75, "elder_pct": 36.13, "age75_pct": 20.82, "age75_of65_pct": 57.61, "area_km2": 246.71, "density": 200.68},
+    {"code": "40229", "name": "みやま市", "kana": "みやまし", "population": 33609, "young_pct": 10.14, "work_pct": 49.75, "elder_pct": 40.12, "age75_pct": 23.15, "age75_of65_pct": 57.7, "area_km2": 105.21, "density": 319.45},
+    {"code": "40230", "name": "糸島市", "kana": "いとしまし", "population": 104141, "young_pct": 13.46, "work_pct": 56.07, "elder_pct": 30.48, "age75_pct": 16.89, "age75_of65_pct": 55.43, "area_km2": 215.69, "density": 482.83},
+    {"code": "40231", "name": "那珂川市", "kana": "なかがわし", "population": 49221, "young_pct": 14.03, "work_pct": 60.66, "elder_pct": 25.31, "age75_pct": 13.94, "age75_of65_pct": 55.06, "area_km2": 74.95, "density": 656.72},
+    {"code": "40341", "name": "宇美町", "kana": "うみまち", "population": 36722, "young_pct": 13.5, "work_pct": 56.8, "elder_pct": 29.7, "age75_pct": 15.45, "age75_of65_pct": 52.0, "area_km2": 30.21, "density": 1215.56},
+    {"code": "40342", "name": "篠栗町", "kana": "ささぐりまち", "population": 31274, "young_pct": 13.72, "work_pct": 61.06, "elder_pct": 25.22, "age75_pct": 14.25, "age75_of65_pct": 56.51, "area_km2": 38.93, "density": 803.34},
+    {"code": "40343", "name": "志免町", "kana": "しめまち", "population": 46274, "young_pct": 14.17, "work_pct": 61.7, "elder_pct": 24.13, "age75_pct": 14.09, "age75_of65_pct": 58.39, "area_km2": 8.69, "density": 5324.97},
+    {"code": "40344", "name": "須恵町", "kana": "すえまち", "population": 29748, "young_pct": 15.63, "work_pct": 58.37, "elder_pct": 26.01, "age75_pct": 15.5, "age75_of65_pct": 59.59, "area_km2": 16.31, "density": 1823.91},
+    {"code": "40345", "name": "新宮町", "kana": "しんぐうまち", "population": 33176, "young_pct": 16.87, "work_pct": 63.2, "elder_pct": 19.93, "age75_pct": 10.37, "age75_of65_pct": 52.03, "area_km2": 18.93, "density": 1752.56},
+    {"code": "40348", "name": "久山町", "kana": "ひさやままち", "population": 9354, "young_pct": 16.36, "work_pct": 56.8, "elder_pct": 26.84, "age75_pct": 15.98, "age75_of65_pct": 59.54, "area_km2": 37.44, "density": 249.84},
+    {"code": "40349", "name": "粕屋町", "kana": "かすやまち", "population": 48404, "young_pct": 15.24, "work_pct": 66.5, "elder_pct": 18.27, "age75_pct": 10.02, "age75_of65_pct": 54.88, "area_km2": 14.13, "density": 3425.62},
+    {"code": "40381", "name": "芦屋町", "kana": "あしやまち", "population": 12486, "young_pct": 11.51, "work_pct": 55.25, "elder_pct": 33.25, "age75_pct": 20.3, "age75_of65_pct": 61.07, "area_km2": 11.58, "density": 1078.24},
+    {"code": "40382", "name": "水巻町", "kana": "みずまきまち", "population": 27398, "young_pct": 12.18, "work_pct": 54.11, "elder_pct": 33.72, "age75_pct": 19.24, "age75_of65_pct": 57.07, "area_km2": 11.01, "density": 2488.47},
+    {"code": "40383", "name": "岡垣町", "kana": "おかがきまち", "population": 31081, "young_pct": 12.42, "work_pct": 54.01, "elder_pct": 33.58, "age75_pct": 20.02, "age75_of65_pct": 59.62, "area_km2": 48.64, "density": 639.0},
+    {"code": "40384", "name": "遠賀町", "kana": "おんがちょう", "population": 18807, "young_pct": 11.82, "work_pct": 52.87, "elder_pct": 35.31, "age75_pct": 20.79, "age75_of65_pct": 58.89, "area_km2": 22.15, "density": 849.07},
+    {"code": "40401", "name": "小竹町", "kana": "こたけまち", "population": 6798, "young_pct": 7.28, "work_pct": 49.41, "elder_pct": 43.31, "age75_pct": 26.51, "age75_of65_pct": 61.21, "area_km2": 14.28, "density": 476.05},
+    {"code": "40402", "name": "鞍手町", "kana": "くらてまち", "population": 14591, "young_pct": 9.88, "work_pct": 49.74, "elder_pct": 40.38, "age75_pct": 23.95, "age75_of65_pct": 59.3, "area_km2": 35.6, "density": 409.86},
+    {"code": "40421", "name": "桂川町", "kana": "けいせんまち", "population": 12669, "young_pct": 11.18, "work_pct": 52.35, "elder_pct": 36.47, "age75_pct": 20.27, "age75_of65_pct": 55.58, "area_km2": 20.14, "density": 629.05},
+    {"code": "40447", "name": "筑前町", "kana": "ちくぜんまち", "population": 30993, "young_pct": 14.17, "work_pct": 55.94, "elder_pct": 29.89, "age75_pct": 16.7, "age75_of65_pct": 55.88, "area_km2": 67.1, "density": 461.89},
+    {"code": "40448", "name": "東峰村", "kana": "とうほうむら", "population": 1721, "young_pct": 8.66, "work_pct": 42.71, "elder_pct": 48.63, "age75_pct": 27.31, "age75_of65_pct": 56.15, "area_km2": 51.97, "density": 33.12},
+    {"code": "40503", "name": "大刀洗町", "kana": "たちあらいまち", "population": 16170, "young_pct": 14.93, "work_pct": 56.9, "elder_pct": 28.18, "age75_pct": 15.78, "age75_of65_pct": 56.01, "area_km2": 22.84, "density": 707.97},
+    {"code": "40522", "name": "大木町", "kana": "おおきまち", "population": 13549, "young_pct": 13.41, "work_pct": 56.35, "elder_pct": 30.24, "age75_pct": 16.94, "age75_of65_pct": 56.02, "area_km2": 18.44, "density": 734.76},
+    {"code": "40544", "name": "広川町", "kana": "ひろかわまち", "population": 19051, "young_pct": 12.75, "work_pct": 56.84, "elder_pct": 30.41, "age75_pct": 17.0, "age75_of65_pct": 55.91, "area_km2": 37.94, "density": 502.13},
+    {"code": "40601", "name": "香春町", "kana": "かわらまち", "population": 9808, "young_pct": 10.13, "work_pct": 46.96, "elder_pct": 42.9, "age75_pct": 25.67, "age75_of65_pct": 59.84, "area_km2": 44.5, "density": 220.4},
+    {"code": "40602", "name": "添田町", "kana": "そえだまち", "population": 8086, "young_pct": 7.99, "work_pct": 45.91, "elder_pct": 46.1, "age75_pct": 27.42, "age75_of65_pct": 59.47, "area_km2": 132.2, "density": 61.16},
+    {"code": "40604", "name": "糸田町", "kana": "いとだまち", "population": 8120, "young_pct": 11.56, "work_pct": 49.99, "elder_pct": 38.45, "age75_pct": 22.7, "age75_of65_pct": 59.03, "area_km2": 8.04, "density": 1009.95},
+    {"code": "40605", "name": "川崎町", "kana": "かわさきまち", "population": 14499, "young_pct": 10.0, "work_pct": 49.48, "elder_pct": 40.52, "age75_pct": 23.25, "age75_of65_pct": 57.38, "area_km2": 36.14, "density": 401.19},
+    {"code": "40608", "name": "大任町", "kana": "おおとうまち", "population": 4948, "young_pct": 13.99, "work_pct": 48.59, "elder_pct": 37.43, "age75_pct": 22.23, "age75_of65_pct": 59.4, "area_km2": 14.26, "density": 346.98},
+    {"code": "40609", "name": "赤村", "kana": "あかむら", "population": 2754, "young_pct": 11.51, "work_pct": 46.37, "elder_pct": 42.12, "age75_pct": 23.78, "age75_of65_pct": 56.47, "area_km2": 31.98, "density": 86.12},
+    {"code": "40610", "name": "福智町", "kana": "ふくちまち", "population": 20589, "young_pct": 11.65, "work_pct": 51.31, "elder_pct": 37.03, "age75_pct": 21.2, "age75_of65_pct": 57.25, "area_km2": 42.06, "density": 489.51},
+    {"code": "40621", "name": "苅田町", "kana": "かんだまち", "population": 37447, "young_pct": 13.31, "work_pct": 61.13, "elder_pct": 25.56, "age75_pct": 14.28, "age75_of65_pct": 55.86, "area_km2": 49.52, "density": 756.2},
+    {"code": "40625", "name": "みやこ町", "kana": "みやこまち", "population": 17339, "young_pct": 9.25, "work_pct": 47.7, "elder_pct": 43.05, "age75_pct": 26.4, "age75_of65_pct": 61.33, "area_km2": 151.34, "density": 114.57},
+    {"code": "40642", "name": "吉富町", "kana": "よしとみまち", "population": 6467, "young_pct": 12.68, "work_pct": 55.91, "elder_pct": 31.41, "age75_pct": 19.25, "age75_of65_pct": 61.3, "area_km2": 5.73, "density": 1128.62},
+    {"code": "40646", "name": "上毛町", "kana": "こうげまち", "population": 7077, "young_pct": 12.31, "work_pct": 50.29, "elder_pct": 37.4, "age75_pct": 21.52, "age75_of65_pct": 57.54, "area_km2": 62.44, "density": 113.34},
+    {"code": "40647", "name": "築上町", "kana": "ちくじょうまち", "population": 16071, "young_pct": 9.31, "work_pct": 51.32, "elder_pct": 39.37, "age75_pct": 24.29, "age75_of65_pct": 61.7, "area_km2": 119.57, "density": 134.41}
+  ] },
+  '43': { name: '熊本県', data: [
+    {"code": "43100", "name": "熊本市", "kana": "くまもとし", "population": 728700, "young_pct": 12.92, "work_pct": 59.34, "elder_pct": 27.74, "age75_pct": 15.56, "age75_of65_pct": 56.09, "area_km2": 390.44, "density": 1866.36},
+    {"code": "43202", "name": "八代市", "kana": "やつしろし", "population": 118746, "young_pct": 11.03, "work_pct": 53.55, "elder_pct": 35.42, "age75_pct": 20.54, "age75_of65_pct": 58.0, "area_km2": 681.3, "density": 174.29},
+    {"code": "43203", "name": "人吉市", "kana": "ひとよしし", "population": 29084, "young_pct": 10.72, "work_pct": 50.13, "elder_pct": 39.15, "age75_pct": 22.71, "age75_of65_pct": 58.01, "area_km2": 210.55, "density": 138.13},
+    {"code": "43204", "name": "荒尾市", "kana": "あらおし", "population": 48490, "young_pct": 11.51, "work_pct": 51.44, "elder_pct": 37.04, "age75_pct": 21.7, "age75_of65_pct": 58.59, "area_km2": 57.37, "density": 845.22},
+    {"code": "43205", "name": "水俣市", "kana": "みなまたし", "population": 21142, "young_pct": 9.71, "work_pct": 46.96, "elder_pct": 43.33, "age75_pct": 25.62, "age75_of65_pct": 59.13, "area_km2": 163.29, "density": 129.48},
+    {"code": "43206", "name": "玉名市", "kana": "たまなし", "population": 61684, "young_pct": 11.52, "work_pct": 52.37, "elder_pct": 36.11, "age75_pct": 20.72, "age75_of65_pct": 57.39, "area_km2": 152.33, "density": 404.94},
+    {"code": "43208", "name": "山鹿市", "kana": "やまがし", "population": 47378, "young_pct": 10.96, "work_pct": 49.51, "elder_pct": 39.52, "age75_pct": 23.1, "age75_of65_pct": 58.44, "area_km2": 299.69, "density": 158.09},
+    {"code": "43210", "name": "菊池市", "kana": "きくちし", "population": 46490, "young_pct": 11.74, "work_pct": 53.57, "elder_pct": 34.69, "age75_pct": 19.49, "age75_of65_pct": 56.18, "area_km2": 276.85, "density": 167.92},
+    {"code": "43211", "name": "宇土市", "kana": "うとし", "population": 35847, "young_pct": 12.59, "work_pct": 55.9, "elder_pct": 31.51, "age75_pct": 18.02, "age75_of65_pct": 57.18, "area_km2": 74.3, "density": 482.46},
+    {"code": "43212", "name": "上天草市", "kana": "かみあまくさし", "population": 22851, "young_pct": 8.61, "work_pct": 46.05, "elder_pct": 45.34, "age75_pct": 25.91, "age75_of65_pct": 57.14, "area_km2": 126.67, "density": 180.4},
+    {"code": "43213", "name": "宇城市", "kana": "うきし", "population": 55703, "young_pct": 11.73, "work_pct": 52.83, "elder_pct": 35.44, "age75_pct": 20.33, "age75_of65_pct": 57.36, "area_km2": 188.55, "density": 295.43},
+    {"code": "43214", "name": "阿蘇市", "kana": "あそし", "population": 23860, "young_pct": 9.92, "work_pct": 49.45, "elder_pct": 40.63, "age75_pct": 23.98, "age75_of65_pct": 59.01, "area_km2": 376.3, "density": 63.41},
+    {"code": "43215", "name": "天草市", "kana": "あまくさし", "population": 70451, "young_pct": 9.69, "work_pct": 46.91, "elder_pct": 43.39, "age75_pct": 24.77, "age75_of65_pct": 57.1, "area_km2": 683.82, "density": 103.03},
+    {"code": "43216", "name": "合志市", "kana": "こうしし", "population": 65405, "young_pct": 17.7, "work_pct": 57.94, "elder_pct": 24.36, "age75_pct": 13.5, "age75_of65_pct": 55.44, "area_km2": 53.19, "density": 1229.65},
+    {"code": "43348", "name": "美里町", "kana": "みさとまち", "population": 8368, "young_pct": 6.55, "work_pct": 44.05, "elder_pct": 49.4, "age75_pct": 28.64, "age75_of65_pct": 57.98, "area_km2": 144.0, "density": 58.11},
+    {"code": "43364", "name": "玉東町", "kana": "ぎょくとうまち", "population": 5086, "young_pct": 13.45, "work_pct": 50.49, "elder_pct": 36.06, "age75_pct": 21.79, "age75_of65_pct": 60.41, "area_km2": 24.33, "density": 209.04},
+    {"code": "43367", "name": "南関町", "kana": "なんかんまち", "population": 8448, "young_pct": 9.38, "work_pct": 47.93, "elder_pct": 42.7, "age75_pct": 25.34, "age75_of65_pct": 59.36, "area_km2": 69.18, "density": 122.12},
+    {"code": "43368", "name": "長洲町", "kana": "ながすまち", "population": 15089, "young_pct": 10.97, "work_pct": 51.72, "elder_pct": 37.31, "age75_pct": 20.98, "age75_of65_pct": 56.23, "area_km2": 19.44, "density": 776.18},
+    {"code": "43369", "name": "和水町", "kana": "なごみまち", "population": 8866, "young_pct": 10.0, "work_pct": 46.1, "elder_pct": 43.9, "age75_pct": 25.46, "age75_of65_pct": 57.99, "area_km2": 98.78, "density": 89.76},
+    {"code": "43403", "name": "大津町", "kana": "おおづまち", "population": 36408, "young_pct": 14.94, "work_pct": 61.63, "elder_pct": 23.44, "age75_pct": 12.39, "age75_of65_pct": 52.87, "area_km2": 99.1, "density": 367.39},
+    {"code": "43404", "name": "菊陽町", "kana": "きくようまち", "population": 43943, "young_pct": 15.78, "work_pct": 62.45, "elder_pct": 21.76, "age75_pct": 11.77, "age75_of65_pct": 54.06, "area_km2": 37.46, "density": 1173.06},
+    {"code": "43423", "name": "南小国町", "kana": "みなみおぐにまち", "population": 3743, "young_pct": 10.02, "work_pct": 50.28, "elder_pct": 39.7, "age75_pct": 23.0, "age75_of65_pct": 57.94, "area_km2": 115.9, "density": 32.3},
+    {"code": "43424", "name": "小国町", "kana": "おぐにまち", "population": 6135, "young_pct": 9.14, "work_pct": 46.03, "elder_pct": 44.82, "age75_pct": 26.57, "age75_of65_pct": 59.27, "area_km2": 136.94, "density": 44.8},
+    {"code": "43425", "name": "産山村", "kana": "うぶやまむら", "population": 1310, "young_pct": 9.16, "work_pct": 46.87, "elder_pct": 43.97, "age75_pct": 26.72, "age75_of65_pct": 60.76, "area_km2": 60.81, "density": 21.54},
+    {"code": "43428", "name": "高森町", "kana": "たかもりまち", "population": 5758, "young_pct": 9.07, "work_pct": 46.04, "elder_pct": 44.89, "age75_pct": 25.91, "age75_of65_pct": 57.72, "area_km2": 175.06, "density": 32.89},
+    {"code": "43432", "name": "西原村", "kana": "にしはらむら", "population": 7114, "young_pct": 12.51, "work_pct": 54.85, "elder_pct": 32.64, "age75_pct": 17.36, "age75_of65_pct": 53.19, "area_km2": 77.22, "density": 92.13},
+    {"code": "43433", "name": "南阿蘇村", "kana": "みなみあそむら", "population": 9895, "young_pct": 9.47, "work_pct": 46.32, "elder_pct": 44.21, "age75_pct": 25.21, "age75_of65_pct": 57.03, "area_km2": 137.32, "density": 72.06},
+    {"code": "43441", "name": "御船町", "kana": "みふねまち", "population": 17320, "young_pct": 13.48, "work_pct": 52.06, "elder_pct": 34.46, "age75_pct": 19.69, "age75_of65_pct": 57.13, "area_km2": 99.03, "density": 174.9},
+    {"code": "43442", "name": "嘉島町", "kana": "かしままち", "population": 10388, "young_pct": 18.45, "work_pct": 56.53, "elder_pct": 25.02, "age75_pct": 14.24, "age75_of65_pct": 56.91, "area_km2": 16.65, "density": 623.9},
+    {"code": "43443", "name": "益城町", "kana": "ましきまち", "population": 34443, "young_pct": 15.45, "work_pct": 54.82, "elder_pct": 29.73, "age75_pct": 16.79, "age75_of65_pct": 56.49, "area_km2": 65.68, "density": 524.41},
+    {"code": "43444", "name": "甲佐町", "kana": "こうさまち", "population": 9743, "young_pct": 11.3, "work_pct": 47.84, "elder_pct": 40.86, "age75_pct": 24.82, "age75_of65_pct": 60.74, "area_km2": 57.93, "density": 168.19},
+    {"code": "43447", "name": "山都町", "kana": "やまとちょう", "population": 12479, "young_pct": 7.36, "work_pct": 39.6, "elder_pct": 53.03, "age75_pct": 31.65, "age75_of65_pct": 59.69, "area_km2": 544.67, "density": 22.91},
+    {"code": "43468", "name": "氷川町", "kana": "ひかわちょう", "population": 10496, "young_pct": 9.26, "work_pct": 49.7, "elder_pct": 41.03, "age75_pct": 24.11, "age75_of65_pct": 58.76, "area_km2": 33.31, "density": 315.1},
+    {"code": "43482", "name": "芦北町", "kana": "あしきたまち", "population": 14533, "young_pct": 8.4, "work_pct": 43.49, "elder_pct": 48.1, "age75_pct": 28.51, "age75_of65_pct": 59.26, "area_km2": 234.01, "density": 62.1},
+    {"code": "43484", "name": "津奈木町", "kana": "つなぎまち", "population": 4001, "young_pct": 9.02, "work_pct": 44.91, "elder_pct": 46.06, "age75_pct": 26.94, "age75_of65_pct": 58.49, "area_km2": 34.08, "density": 117.4},
+    {"code": "43501", "name": "錦町", "kana": "にしきまち", "population": 9979, "young_pct": 13.31, "work_pct": 51.73, "elder_pct": 34.96, "age75_pct": 19.11, "age75_of65_pct": 54.66, "area_km2": 85.04, "density": 117.34},
+    {"code": "43505", "name": "多良木町", "kana": "たらぎまち", "population": 8134, "young_pct": 9.32, "work_pct": 45.46, "elder_pct": 45.22, "age75_pct": 26.89, "age75_of65_pct": 59.46, "area_km2": 165.86, "density": 49.04},
+    {"code": "43506", "name": "湯前町", "kana": "ゆのまえまち", "population": 3356, "young_pct": 9.48, "work_pct": 44.07, "elder_pct": 46.45, "age75_pct": 28.78, "age75_of65_pct": 61.96, "area_km2": 48.37, "density": 69.38},
+    {"code": "43507", "name": "水上村", "kana": "みずかみむら", "population": 1899, "young_pct": 9.85, "work_pct": 43.76, "elder_pct": 46.39, "age75_pct": 28.28, "age75_of65_pct": 60.95, "area_km2": 190.96, "density": 9.94},
+    {"code": "43510", "name": "相良村", "kana": "さがらむら", "population": 3900, "young_pct": 9.97, "work_pct": 44.79, "elder_pct": 45.23, "age75_pct": 26.51, "age75_of65_pct": 58.62, "area_km2": 94.54, "density": 41.25},
+    {"code": "43511", "name": "五木村", "kana": "いつきむら", "population": 893, "young_pct": 5.26, "work_pct": 42.33, "elder_pct": 52.41, "age75_pct": 33.03, "age75_of65_pct": 63.03, "area_km2": 252.92, "density": 3.53},
+    {"code": "43512", "name": "山江村", "kana": "やまえむら", "population": 3092, "young_pct": 13.81, "work_pct": 47.51, "elder_pct": 38.68, "age75_pct": 20.6, "age75_of65_pct": 53.26, "area_km2": 121.19, "density": 25.51},
+    {"code": "43513", "name": "球磨村", "kana": "くまむら", "population": 2557, "young_pct": 7.2, "work_pct": 40.95, "elder_pct": 51.86, "age75_pct": 29.57, "age75_of65_pct": 57.01, "area_km2": 207.58, "density": 12.32},
+    {"code": "43514", "name": "あさぎり町", "kana": "あさぎりちょう", "population": 13742, "young_pct": 11.17, "work_pct": 48.46, "elder_pct": 40.37, "age75_pct": 23.31, "age75_of65_pct": 57.74, "area_km2": 159.56, "density": 86.12},
+    {"code": "43531", "name": "苓北町", "kana": "れいほくまち", "population": 6049, "young_pct": 8.55, "work_pct": 44.93, "elder_pct": 46.52, "age75_pct": 26.75, "age75_of65_pct": 57.5, "area_km2": 67.58, "density": 89.51}
+  ] }
+};
 
 // 市町村の形：出典 国土交通省 国土数値情報（行政区域データ）を加工（smartnews-smri/japan-topography 簡素化1%版）
 // r: 輪（本土・島）ごとの [x0,y0,x1,y1,...]（外接正方形の中心を0、半幅を100に正規化）
@@ -219,7 +273,52 @@ const SHAPES = {
   "40625":{"r":[[-47,-94,-45,-84,-46,-79,-44,-71,-40,-66,-42,-62,-42,-58,-37,-52,-32,-42,-35,-36,-37,-34,-36,-29,-32,-27,-30,-23,-32,-21,-30,-16,-24,-19,-20,-17,-21,-15,-22,-9,-27,0,-24,4,-24,9,-18,15,-18,20,-14,22,-11,31,-12,39,-10,43,-12,50,-4,65,-5,70,-3,75,-3,80,1,83,-1,91,5,94,7,100,11,97,15,95,15,92,20,90,22,86,28,84,21,78,17,70,18,60,17,57,20,53,19,51,23,43,15,39,14,34,15,26,15,23,17,20,17,16,19,14,22,3,22,1,24,-2,27,-12,29,-12,30,-17,34,-21,32,-24,32,-29,34,-33,33,-36,41,-44,45,-46,47,-48,44,-49,43,-52,43,-56,42,-58,37,-62,33,-58,29,-60,25,-59,21,-60,20,-56,17,-56,10,-50,8,-52,6,-50,1,-49,0,-47,-3,-45,-8,-45,-7,-49,-6,-62,-7,-66,0,-75,-5,-82,-12,-81,-14,-83,-17,-83,-18,-76,-22,-78,-23,-82,-26,-84,-29,-93,-31,-94,-32,-100,-40,-99]],"e":[4,-20],"ei":24},
   "40642":{"r":[[-63,40,-20,59,-13,97,15,100,48,49,45,0,82,-67,80,-95,49,-100,-14,-73,-45,-17,-82,16]],"e":[-4,12],"ei":49},
   "40646":{"r":[[-100,80,-97,85,-80,88,-58,84,-46,89,-38,83,-16,94,2,93,7,87,20,89,42,86,43,83,55,81,62,87,76,85,73,73,63,66,66,57,61,42,78,31,94,12,100,-15,98,-25,93,-35,76,-48,72,-55,70,-75,61,-76,58,-88,45,-94,37,-79,21,-70,15,-63,3,-57,-2,-47,-12,-34,-17,-13,-22,-8,-26,5,-32,14,-58,28,-56,37,-62,50,-76,61,-86,63]],"e":[40,-8],"ei":53},
-  "40647":{"r":[[-12,-86,-14,-83,-20,-80,-31,-69,-30,-65,-33,-59,-33,-53,-30,-47,-35,-42,-37,-36,-40,-35,-44,-21,-47,-17,-46,-14,-50,2,-53,5,-54,10,-57,14,-56,18,-58,29,-57,36,-49,41,-46,42,-50,53,-49,56,-54,61,-52,66,-53,79,-48,91,-39,100,-34,100,-31,98,-31,89,-27,78,-21,72,-20,72,-12,64,-13,60,-11,54,-11,49,0,38,5,37,20,12,23,3,29,-5,39,-12,49,-28,54,-31,58,-40,55,-42,52,-55,45,-64,40,-67,39,-74,35,-82,33,-82,25,-97,20,-100,20,-95,12,-90,6,-89,-1,-94,-7,-88]],"e":[8,-40],"ei":39}
+  "40647":{"r":[[-12,-86,-14,-83,-20,-80,-31,-69,-30,-65,-33,-59,-33,-53,-30,-47,-35,-42,-37,-36,-40,-35,-44,-21,-47,-17,-46,-14,-50,2,-53,5,-54,10,-57,14,-56,18,-58,29,-57,36,-49,41,-46,42,-50,53,-49,56,-54,61,-52,66,-53,79,-48,91,-39,100,-34,100,-31,98,-31,89,-27,78,-21,72,-20,72,-12,64,-13,60,-11,54,-11,49,0,38,5,37,20,12,23,3,29,-5,39,-12,49,-28,54,-31,58,-40,55,-42,52,-55,45,-64,40,-67,39,-74,35,-82,33,-82,25,-97,20,-100,20,-95,12,-90,6,-89,-1,-94,-7,-88]],"e":[8,-40],"ei":39},
+  "43100":{"r":[[15,44,24,41,29,36,32,35,34,37,37,35,41,35,50,31,48,26,46,26,44,22,44,14,41,9,44,9,46,12,56,8,57,4,61,2,68,2,67,-8,63,-12,57,-12,55,-21,48,-22,46,-25,42,-24,40,-25,32,-24,27,-23,25,-25,21,-22,17,-21,13,-22,16,-27,16,-44,13,-44,10,-49,12,-52,11,-56,16,-69,16,-76,15,-79,16,-89,15,-93,18,-97,13,-100,10,-98,5,-100,5,-98,2,-94,0,-89,-2,-86,-5,-89,-14,-84,-16,-83,-18,-75,-20,-73,-24,-74,-26,-72,-29,-71,-33,-62,-28,-56,-27,-47,-25,-44,-29,-42,-32,-34,-33,-29,-35,-27,-39,-27,-37,-22,-40,-21,-41,-16,-46,-15,-53,-18,-55,-17,-67,-21,-68,-19,-64,-14,-62,-5,-59,-5,-57,-3,-55,5,-53,5,-50,8,-51,11,-45,17,-49,18,-51,22,-51,26,-54,26,-53,33,-51,39,-50,41,-51,42,-49,48,-51,56,-49,65,-44,66,-38,69,-33,68,-30,64,-22,71,-19,71,-17,74,-15,78,-10,79,-5,81,-2,80,-1,82,5,83,8,85,9,87,13,91,15,94,18,96,18,100,22,98,27,93,28,97,33,96,40,97,37,86,34,84,34,80,28,76,28,70,32,68,30,57,25,53,13,52,7,53,0,53,3,50,6,51,10,47,13,48],[-57,32,-67,32,-67,36,-58,36]],"e":[-8,12],"ei":37},
+  "43202":{"r":[[-21,-43,-25,-42,-26,-38,-29,-35,-32,-36,-31,-32,-36,-28,-40,-34,-45,-36,-43,-40,-43,-44,-40,-45,-41,-47,-58,-64,-65,-57,-68,-59,-75,-51,-86,-33,-89,-35,-92,-32,-94,-33,-97,-27,-86,-20,-84,-18,-98,-25,-99,-24,-85,-17,-86,-14,-92,-14,-94,-11,-94,-7,-93,-4,-91,-3,-85,-3,-85,1,-83,3,-85,7,-82,14,-83,17,-89,23,-92,23,-96,29,-94,31,-95,34,-97,35,-97,37,-99,41,-97,42,-100,47,-99,50,-95,51,-91,47,-90,43,-87,43,-84,45,-80,48,-76,45,-71,47,-68,46,-63,47,-61,51,-59,50,-54,51,-53,48,-50,47,-48,47,-47,53,-45,56,-43,63,-39,62,-37,64,-33,62,-30,60,-32,56,-30,55,-30,52,-27,49,-22,41,-18,38,-15,37,-14,34,-16,32,-21,31,-21,28,-23,25,-19,20,-22,10,-19,9,-14,8,-15,4,-16,-1,-14,0,-10,1,-10,-2,-7,-4,4,-7,7,-12,12,-12,16,-10,26,-14,27,-11,29,-11,30,-8,33,-11,35,-11,40,-7,42,-4,46,-3,50,1,49,9,51,13,55,14,61,14,64,15,66,15,71,13,73,10,81,9,82,11,85,11,90,9,93,5,96,4,97,-1,93,-10,94,-22,96,-22,97,-24,100,-24,100,-30,98,-34,98,-38,90,-48,88,-48,85,-49,78,-53,75,-52,72,-52,70,-53,69,-51,65,-52,59,-50,59,-53,55,-55,53,-55,53,-51,47,-49,43,-50,38,-49,34,-50,28,-48,26,-49,21,-44,18,-44,16,-47,11,-47,7,-52,5,-60,3,-60,-4,-50,-7,-50,-9,-47,-9,-45,-14,-43,-16,-44]],"e":[-52,0],"ei":31},
+  "43203":{"r":[[19,-36,15,-42,10,-38,-1,-34,-5,-36,-11,-53,-20,-52,-20,-74,-22,-82,-28,-84,-29,-94,-40,-100,-45,-89,-37,-81,-38,-71,-28,-67,-25,-60,-28,-55,-32,-50,-34,-45,-38,-45,-42,-35,-53,-30,-70,-10,-71,-1,-77,10,-83,11,-84,21,-82,26,-89,27,-91,38,-94,44,-91,54,-91,59,-79,66,-62,80,-55,88,-42,91,-37,94,-31,93,-26,87,-21,90,-22,94,-9,92,-5,98,2,93,12,95,36,96,46,100,48,95,55,90,61,88,70,91,76,95,81,93,87,80,92,78,94,74,88,66,86,58,78,61,76,65,71,66,63,53,58,55,52,60,50,53,45,46,47,43,41,35,44,30,40,25,41,16,39,12,33,13,27,5,20,1,16,2,14,-10,14,-20,18,-19,17,-27,21,-30]],"e":[-28,32],"ei":53},
+  "43204":{"r":[[95,-29,83,-46,84,-55,75,-78,60,-61,46,-66,20,-56,-37,-61,-47,-58,-62,-63,-82,-64,-100,-58,-93,-39,-80,-40,-73,-26,-69,31,-59,67,-49,60,-31,59,-24,71,-11,72,6,48,26,53,39,49,35,72,42,78,46,69,57,65,67,56,69,41,86,22,100,-7]],"e":[-16,-4],"ei":55},
+  "43205":{"r":[[-39,-56,-47,-63,-54,-58,-60,-56,-64,-60,-68,-53,-71,-52,-78,-38,-84,-30,-90,-26,-83,-16,-88,-11,-85,-6,-85,0,-91,-1,-94,-5,-100,-6,-98,2,-99,9,-90,17,-83,26,-78,29,-73,43,-64,52,-64,57,-45,60,-41,62,-32,63,-25,60,-20,63,-13,58,-10,61,-4,58,-2,54,-1,38,3,37,12,43,17,41,26,36,33,41,52,39,57,27,67,22,88,21,93,8,100,0,99,-8,85,-19,81,-17,58,-21,43,-14,39,-10,35,-10,30,-7,21,-13,17,-20,12,-23,3,-24,-6,-31,-7,-34,-11,-33,-24,-35,-34,-41,-35,-51]],"e":[-36,8],"ei":45},
+  "43206":{"r":[[79,74,64,57,59,44,58,36,69,28,70,19,67,5,57,1,60,-7,64,-9,74,-20,79,-30,67,-40,63,-36,59,-44,62,-48,58,-54,50,-55,42,-51,40,-55,45,-60,47,-72,54,-77,50,-86,42,-92,32,-90,29,-95,19,-95,5,-100,-28,-91,-25,-77,-34,-59,-45,-47,-46,-38,-53,-31,-60,-29,-62,-24,-62,-15,-69,-9,-72,-2,-84,18,-64,33,-59,33,-33,49,-29,54,-33,64,-34,85,-27,88,12,100,19,91,21,86,46,94,51,93,65,99,74,96,78,86,84,85]],"e":[0,-4],"ei":57},
+  "43208":{"r":[[-3,67,0,64,4,64,12,57,20,47,30,50,33,45,40,43,42,36,48,34,49,31,48,21,49,14,54,3,60,-2,55,-11,63,-18,69,-16,70,-27,75,-30,75,-34,69,-45,58,-46,58,-50,52,-54,49,-54,43,-57,36,-60,28,-60,23,-61,15,-67,11,-72,0,-79,-2,-85,-7,-86,-10,-84,-18,-87,-23,-84,-32,-86,-31,-90,-36,-98,-40,-100,-41,-94,-49,-88,-50,-77,-48,-73,-52,-69,-54,-61,-54,-55,-58,-53,-57,-48,-60,-43,-57,-38,-57,-31,-61,-27,-68,-24,-73,-18,-73,-13,-70,-8,-71,-2,-61,0,-59,3,-60,13,-62,21,-71,24,-73,27,-69,32,-70,35,-63,38,-64,45,-67,48,-62,54,-66,63,-61,64,-58,67,-60,75,-71,72,-74,76,-75,90,-71,90,-68,95,-65,95,-60,100,-58,97,-53,98,-49,96,-47,85,-45,83,-32,77,-29,81,-25,77,-23,70,-20,66,-20,63,-13,65,-9,63]],"e":[-4,-8],"ei":56},
+  "43210":{"r":[[-99,70,-94,72,-80,71,-69,76,-62,78,-49,86,-45,83,-34,85,-27,88,-19,90,-15,96,-9,89,-8,82,-10,78,-7,73,13,78,10,70,11,67,32,68,49,62,62,63,66,57,72,53,73,48,84,48,88,44,77,34,86,22,89,9,88,-6,100,-25,91,-39,89,-48,81,-54,72,-54,71,-56,61,-53,56,-57,48,-66,42,-65,39,-74,34,-77,33,-85,31,-88,23,-93,15,-92,12,-96,-1,-95,-3,-93,-4,-89,-9,-86,-11,-73,-17,-74,-28,-66,-22,-55,-28,-50,-34,-36,-35,-28,-34,-17,-36,-13,-42,-11,-45,-2,-53,0,-57,6,-69,2,-78,14,-88,23,-93,22,-100,32,-99,39,-100,54,-98,59]],"e":[24,4],"ei":61},
+  "43211":{"r":[[-1,-38,-1,-34,-10,-33,-18,-25,-31,-22,-37,-19,-40,-13,-51,-5,-61,15,-65,19,-78,20,-90,29,-100,31,-99,38,-90,39,-70,37,-55,33,-50,29,-38,28,-29,32,-13,28,-1,23,0,19,6,12,14,13,24,20,29,20,34,15,40,21,48,16,53,23,58,20,65,26,71,15,77,12,80,5,88,8,96,8,100,1,99,-3,94,-7,84,-9,82,-12,75,-10,68,-14,58,-15,56,-23,51,-28,47,-27,43,-32,33,-39,27,-32,18,-30,7,-36]],"e":[-20,4],"ei":25},
+  "43212":{"r":[[-36,78,-31,95,-27,92,-26,88,-24,85,-17,85,-14,87,-9,82,-2,78,0,73,5,65,0,60,8,59,8,53,3,51,7,45,10,37,17,33,18,26,21,22,22,9,32,-7,31,-9,35,-13,34,-20,29,-19,25,-24,21,-22,19,-17,14,-16,10,-19,5,-15,1,-13,-6,-2,-8,-3,-14,1,-14,11,-16,15,-19,14,-24,16,-31,15,-34,13,-39,12,-41,18,-39,21,-43,29,-42,33,-36,41,-25,45,-23,43,-14,41,-13,47,-18,63,-24,68,-24,73,-27,75,-32,73],[26,-100,21,-97,18,-93,12,-93,7,-88,2,-78,-5,-73,-6,-69,-2,-66,2,-67,9,-65,11,-60,8,-59,3,-53,3,-48,1,-44,1,-41,9,-41,13,-43,16,-39,23,-39,24,-43,31,-49,31,-54,29,-58,32,-61,36,-69,32,-70,30,-73,27,-79,34,-87,36,-91,31,-93],[46,-70,42,-68,41,-64,37,-59,40,-52,38,-49,41,-45,39,-34,41,-33,44,-38,44,-41,55,-57],[8,77,6,79,4,89,12,93,8,100,13,99,18,95,13,91,13,82],[-43,-85,-47,-84,-45,-80,-40,-79,-39,-83],[5,-39,8,-32,17,-34],[-51,91,-55,94,-55,100,-51,98],[0,-36,-5,-32,1,-30,3,-35],[-9,-69,-15,-66,-12,-64]],"e":[4,12],"ei":17},
+  "43213":{"r":[[60,-45,57,-40,52,-40,47,-42,45,-37,41,-35,37,-28,32,-32,29,-30,26,-35,21,-31,16,-35,13,-32,10,-32,3,-37,-2,-37,-6,-33,-6,-30,-14,-26,-25,-24,-31,-27,-39,-26,-42,-23,-52,-21,-65,-19,-71,-20,-72,-25,-78,-19,-82,-18,-85,-14,-95,-10,-100,-5,-95,2,-96,9,-91,11,-88,8,-84,8,-80,5,-65,6,-60,5,-58,2,-52,-1,-49,1,-46,-3,-44,-2,-35,-3,-24,-1,-17,-4,-12,-4,-1,-9,6,-9,11,-11,21,-16,22,-11,26,-9,22,-5,24,1,22,5,14,-3,8,-2,14,4,17,3,21,7,37,16,37,20,49,29,53,26,58,30,54,35,59,41,64,45,72,42,75,44,82,41,82,38,86,33,90,33,92,28,96,26,100,18,97,13,98,-6,97,-7,97,-15,95,-23,96,-34,88,-35,82,-34,81,-38,75,-32,71,-30,70,-34,67,-37,65,-41],[-75,7,-79,8,-87,12,-83,17,-83,21,-80,20,-76,22,-80,27,-76,32,-71,24,-66,20,-65,15,-66,9]],"e":[68,0],"ei":30},
+  "43214":{"r":[[-91,5,-90,9,-86,10,-90,14,-89,19,-85,28,-91,36,-85,44,-77,46,-71,44,-73,41,-71,39,-63,39,-62,41,-50,45,-50,49,-46,50,-43,48,-36,51,-24,58,-20,62,-5,58,3,60,5,57,11,56,26,58,29,60,34,57,41,55,47,59,51,63,51,66,70,58,84,47,85,45,100,40,99,27,96,22,95,15,99,11,97,9,96,5,99,2,95,0,89,-2,83,0,81,-3,78,-2,76,-8,74,-10,64,-10,61,-8,57,-9,56,-24,53,-26,56,-30,53,-33,47,-36,44,-40,36,-41,34,-48,41,-51,43,-61,40,-63,29,-63,19,-66,15,-62,-3,-55,-7,-64,-15,-61,-19,-61,-23,-54,-58,-46,-64,-53,-69,-49,-78,-50,-82,-49,-92,-34,-91,-22,-93,-12,-100,-3]],"e":[-8,0],"ei":55},
+  "43215":{"r":[[-69,-43,-74,-37,-76,-30,-75,-29,-78,-25,-78,-19,-82,-15,-79,-14,-79,-11,-82,-11,-85,-6,-87,-1,-86,5,-85,7,-85,11,-85,15,-82,17,-80,16,-79,20,-79,24,-75,23,-74,22,-69,21,-69,23,-65,23,-64,26,-61,25,-61,21,-54,23,-52,26,-49,25,-46,28,-48,30,-51,30,-48,34,-50,36,-50,39,-55,39,-55,35,-58,29,-62,27,-64,31,-63,33,-66,35,-66,27,-72,29,-75,34,-79,37,-82,40,-82,42,-85,44,-90,57,-87,59,-84,55,-81,59,-71,61,-71,68,-73,69,-77,70,-78,77,-80,79,-76,82,-71,79,-71,84,-67,85,-63,79,-64,74,-60,74,-58,78,-52,73,-46,73,-42,70,-46,66,-42,64,-43,61,-43,57,-39,57,-40,60,-39,65,-34,63,-33,54,-37,55,-37,51,-33,51,-31,52,-25,39,-20,34,-18,34,-16,36,-13,37,-8,33,-6,30,-7,27,-14,27,-16,30,-17,29,-16,25,-14,22,-10,21,-12,17,-9,16,-10,12,-10,10,-7,13,-2,8,-1,10,-5,15,-5,19,-3,23,-1,23,2,21,6,16,8,16,10,11,12,10,11,4,13,0,16,-5,19,-7,17,-11,15,-13,18,-16,17,-19,12,-21,10,-20,8,-15,6,-17,9,-19,9,-24,7,-26,9,-29,12,-30,12,-34,15,-34,12,-39,12,-42,10,-44,9,-48,10,-51,7,-53,10,-56,12,-60,5,-72,7,-77,5,-87,6,-91,3,-99,-4,-100,-14,-99,-18,-98,-25,-98,-27,-96,-26,-94,-23,-91,-26,-85,-25,-83,-27,-81,-28,-77,-26,-76,-27,-71,-32,-65,-35,-65,-39,-59,-42,-54,-37,-49,-36,-38,-38,-38,-41,-42,-44,-43,-53,-43,-59,-40,-68,-42],[89,-75,89,-81,80,-83,80,-87,76,-88,69,-85,66,-85,58,-83,56,-80,48,-73,48,-70,43,-66,39,-65,37,-64,33,-63,30,-59,25,-57,22,-54,21,-55,10,-49,11,-45,13,-42,13,-39,17,-35,19,-29,22,-31,26,-31,27,-29,28,-21,23,-17,27,-15,31,-17,31,-20,34,-25,35,-28,40,-29,42,-25,45,-23,47,-24,54,-21,63,-23,65,-25,69,-26,72,-32,74,-26,77,-24,79,-25,79,-29,83,-32,86,-42,86,-46,80,-45,78,-44,71,-46,68,-51,67,-54,69,-59,68,-61,69,-65,72,-65,74,-63,79,-63,82,-64,84,-63,86,-66,85,-72],[74,1,70,3,67,9,63,11,65,19,60,19,58,22,55,22,53,25,60,24,64,25,66,22,70,22,76,15,78,10,82,6,81,3,78,5],[57,-7,56,-2,52,-4,51,-2,52,2,54,2,58,3,57,5,60,7,63,4,68,4,68,2,59,-4,60,-6],[-64,84,-68,85,-67,88,-69,89,-70,94,-69,98,-67,99,-67,94,-63,92,-58,100,-56,96,-61,91,-60,89],[-17,39,-20,42,-21,45,-19,47,-14,46,-13,44,-14,41],[72,-9,69,-8,68,-6,72,-3,74,-5]],"e":[-48,-8],"ei":31},
+  "43216":{"r":[[-55,60,-43,48,-28,45,-24,55,-5,40,7,36,8,26,17,28,31,24,65,11,67,6,82,-5,100,-7,89,-10,76,-23,68,-34,51,-37,39,-44,19,-47,11,-41,-15,-58,-28,-60,-49,-71,-76,-68,-85,-72,-92,-53,-97,-33,-95,-21,-100,-14,-93,3,-84,3,-83,52,-91,68,-81,72,-67,67]],"e":[-32,-8],"ei":51},
+  "43348":{"r":[[74,39,72,33,81,21,89,16,87,-1,80,-20,72,-26,77,-30,90,-30,100,-35,96,-40,85,-40,82,-43,71,-42,66,-45,63,-53,44,-52,27,-62,16,-58,0,-61,-3,-58,-2,-50,-9,-40,-14,-40,-33,-30,-33,-27,-38,-18,-50,-18,-55,-16,-59,-20,-67,-31,-67,-36,-74,-47,-74,-55,-82,-53,-89,-59,-98,-60,-100,-46,-96,-32,-97,-19,-95,-18,-96,14,-92,21,-86,22,-81,40,-71,53,-60,54,-54,62,-47,60,-33,50,-29,51,-23,48,-14,46,-5,48,8,46,16,50,33,44,31,34,37,33,46,40,47,45,62,41,70,43]],"e":[24,-12],"ei":43},
+  "43364":{"r":[[11,100,19,90,21,70,31,43,46,36,40,25,35,-12,16,-32,34,-69,45,-70,30,-84,22,-85,12,-97,1,-100,-5,-92,-15,-74,-33,-55,-40,-51,-46,-35,-27,-29,-22,-3,-23,14,-43,28,-43,43,-33,66,-6,98]],"e":[-4,44],"ei":32},
+  "43367":{"r":[[-32,100,19,86,41,93,56,95,71,82,64,76,68,64,65,44,80,44,87,20,83,-6,74,-30,65,-27,59,-42,45,-60,49,-72,43,-93,32,-100,15,-98,0,-86,-9,-89,-19,-81,-25,-56,-51,-56,-57,-48,-72,-41,-87,-22,-72,2,-70,24,-61,30,-43,75,-45,83]],"e":[4,8],"ei":69},
+  "43368":{"r":[[-97,-63,-80,-8,-91,20,-76,44,-52,66,-36,47,-13,55,-34,80,-16,96,11,100,30,82,66,24,76,3,96,-17,97,-43,82,-53,91,-98,65,-91,27,-100,-5,-54,-29,-55,-43,-78,-78,-77]],"e":[12,0],"ei":57},
+  "43369":{"r":[[17,100,20,96,22,78,26,72,40,75,44,65,40,61,33,60,38,47,31,39,36,35,36,26,27,22,28,17,22,10,26,6,38,3,41,-8,42,-22,39,-27,26,-29,27,-37,23,-44,23,-51,29,-59,40,-63,45,-69,45,-78,41,-85,45,-92,30,-97,12,-95,7,-92,-1,-94,-7,-99,-18,-98,-27,-100,-34,-95,-36,-89,-45,-86,-45,-77,-41,-72,-41,-67,-35,-63,-31,-51,-33,-45,-25,-34,-22,-26,-17,-27,-12,-14,-9,1,-13,14,-22,14,-21,26,-23,33,-19,36,-27,43,-25,47,-16,45,-8,50,-5,59,-11,63,-13,74,-17,78,-15,82,-9,78,-2,79,2,84,-1,87,3,94,7,91]],"e":[-4,-64],"ei":30},
+  "43403":{"r":[[-100,-10,-89,1,-80,3,-72,16,-74,37,-72,57,-68,62,-58,63,-59,77,-46,81,-45,89,-36,88,-30,77,-21,72,-12,72,-15,63,-10,58,1,56,15,52,21,52,42,46,45,43,66,43,82,50,87,50,95,42,100,31,87,35,80,30,60,34,49,27,72,-12,60,-28,72,-44,64,-61,61,-71,69,-79,62,-82,59,-89,53,-83,36,-83,34,-76,25,-69,18,-60,-1,-62,-28,-53,-60,-55,-62,-49,-57,-37,-89,-45,-93,-37,-90,-31,-92,-20]],"e":[-8,0],"ei":56},
+  "43404":{"r":[[26,62,35,68,41,59,56,49,77,42,84,43,100,34,99,29,83,25,84,7,72,6,66,-1,65,-26,68,-52,57,-68,39,-65,23,-55,21,-49,-13,-36,-28,-32,-37,-34,-38,-25,-49,-20,-68,-6,-72,-15,-88,-12,-100,0,-94,4,-82,1,-56,-1,-51,2,-38,-1,-33,8,-11,10,-6,39,15,37,26,51]],"e":[24,-8],"ei":39},
+  "43423":{"r":[[68,35,74,20,87,7,100,-4,97,-12,89,-7,78,-19,75,-27,78,-35,76,-45,68,-43,50,-47,45,-44,42,-38,37,-36,30,-39,25,-35,19,-37,8,-35,-5,-39,-9,-36,-16,-45,-17,-53,-26,-59,-33,-46,-40,-43,-44,-48,-42,-55,-62,-48,-64,-37,-67,-34,-78,-35,-80,-32,-74,-24,-79,-16,-84,-14,-87,-3,-80,5,-85,19,-84,24,-86,30,-93,34,-95,42,-100,48,-91,59,-35,46,-29,34,-23,34,-10,30,-3,44,16,36,24,34,30,27,46,32,64,32]],"e":[-40,-4],"ei":39},
+  "43424":{"r":[[100,49,93,41,90,35,93,31,94,20,88,5,84,3,74,-6,74,-13,60,-19,55,-28,47,-29,44,-32,41,-44,31,-52,24,-53,20,-50,6,-55,-9,-58,-16,-62,-38,-61,-41,-54,-49,-52,-61,-41,-72,-41,-75,-44,-84,-48,-85,-40,-89,-39,-93,-29,-93,-20,-96,-14,-94,-10,-100,3,-94,12,-87,18,-84,31,-78,35,-73,42,-69,44,-59,62,-58,59,-46,60,-43,57,-41,45,-21,39,-22,45,-18,51,-12,48,-5,35,4,41,6,49,13,58,17,55,30,59,41,57,48,59,53,55,60,58,65,56,68,50,73,47,91,51]],"e":[-24,-8],"ei":47},
+  "43425":{"r":[[58,98,60,94,73,93,80,83,84,69,74,63,60,59,58,48,61,36,50,27,42,12,32,7,25,-3,27,-15,21,-26,13,-64,-16,-100,-36,-84,-55,-65,-63,-43,-68,-20,-84,-13,-80,5,-60,7,-54,16,-39,22,-33,29,-39,40,-33,45,-31,78,-21,80,-13,77,10,77,14,80,18,95,26,93,31,100,45,96]],"e":[-24,-20],"ei":43},
+  "43428":{"r":[[-97,-54,-96,-49,-100,-44,-97,-36,-91,-26,-90,-19,-85,-11,-90,-11,-92,-5,-89,-1,-84,-2,-83,3,-85,25,-82,37,-72,37,-64,33,-59,27,-58,16,-53,12,-45,12,-42,15,-35,17,-28,27,-16,29,-10,36,-5,45,-6,52,-9,58,-8,65,-2,67,1,75,20,80,22,75,26,73,30,64,22,56,23,48,30,46,31,33,38,27,38,22,40,13,44,13,47,5,53,7,56,2,64,0,69,3,78,2,84,3,96,2,100,-6,96,-14,85,-22,72,-27,59,-40,54,-41,52,-47,45,-50,40,-58,36,-69,37,-80,33,-78,17,-73,15,-70,-4,-55,-12,-51,-29,-45,-29,-48,-35,-54,-42,-59,-51,-57,-59,-53,-62,-55,-82,-58,-90,-57,-93,-53]],"e":[4,-12],"ei":42},
+  "43432":{"r":[[-95,-26,-86,6,-93,13,-93,23,-100,32,-96,44,-87,48,-71,73,-60,79,-35,72,-12,77,-1,85,13,75,24,63,34,66,43,76,79,52,92,38,100,36,90,19,69,16,73,1,67,-4,61,-21,66,-32,74,-33,73,-51,62,-64,71,-76,65,-76,45,-85,19,-84,14,-80,-12,-73,-20,-73,-37,-68,-51,-66,-57,-59,-53,-48,-65,-48,-77,-41,-84,-28]],"e":[-4,0],"ei":68},
+  "43433":{"r":[[-78,-82,-100,-44,-90,-38,-72,-41,-65,-37,-52,-40,-57,-30,-65,-23,-71,-14,-63,-5,-62,9,-69,10,-72,18,-68,31,-64,34,-67,46,-51,48,-43,61,-44,69,-40,79,-35,84,-21,88,-10,87,-2,83,8,91,16,89,22,83,42,78,50,79,59,75,64,80,74,74,77,78,92,79,100,74,95,57,99,26,97,20,90,21,87,15,89,8,97,8,89,-4,88,-14,79,-28,75,-39,80,-46,79,-53,70,-55,41,-48,35,-56,24,-61,12,-69,0,-74,-7,-71,-14,-73,-14,-80,-36,-87,-38,-90,-53,-91,-57,-87,-52,-81,-64,-77]],"e":[8,12],"ei":68},
+  "43441":{"r":[[-97,7,-90,11,-77,15,-67,22,-70,28,-68,36,-61,39,-58,29,-51,30,-42,39,-30,40,-17,34,-12,44,-2,44,1,50,1,56,8,55,10,59,16,62,17,74,33,76,44,73,39,72,32,65,31,54,36,51,38,44,35,40,33,10,29,7,33,-7,32,-20,40,-22,49,-31,58,-35,69,-44,84,-51,98,-61,100,-69,95,-75,88,-76,82,-69,73,-63,66,-68,53,-71,37,-67,31,-70,29,-60,17,-52,-19,-48,-18,-39,-28,-31,-24,-10,-29,-11,-32,-8,-41,-6,-44,-14,-50,-23,-58,-24,-60,-27,-67,-18,-73,-19,-82,-14,-86,-8,-92,-8,-100,-2]],"e":[0,8],"ei":29},
+  "43442":{"r":[[-40,-10,-46,7,-59,2,-73,20,-85,14,-100,26,-70,27,-48,23,-21,28,-2,28,18,44,35,33,47,33,56,20,75,9,85,11,100,-7,82,-25,73,-27,61,-42,46,-41,33,-34,26,-44,12,-39,-4,-18]],"e":[28,0],"ei":34},
+  "43443":{"r":[[-85,41,-77,52,-70,54,-56,67,-53,71,-40,74,-30,87,-27,100,-12,97,-8,91,1,93,-6,60,9,49,9,34,64,28,83,16,86,0,70,-24,62,-27,58,-39,65,-47,65,-57,71,-63,63,-94,62,-100,47,-91,40,-91,19,-85,5,-75,-1,-67,-10,-73,-8,-55,-28,-55,-39,-49,-43,-37,-72,-26,-78,-36,-86,-35,-78,-20,-76,2,-71,13,-65,14,-59,29]],"e":[8,-12],"ei":46},
+  "43444":{"r":[[-62,14,-63,20,-49,21,-36,30,-24,28,-23,41,-11,59,-12,67,1,86,9,92,17,89,37,88,45,74,44,69,76,52,85,52,96,36,94,22,100,18,99,-1,87,-7,85,-13,73,-11,73,-22,68,-31,51,-32,43,-48,22,-37,3,-39,-13,-55,-25,-55,-30,-39,-40,-44,-44,-57,-40,-67,-56,-79,-78,-86,-90,-92,-86,-75,-100,-69,-99,-52,-81,-38,-82,-26,-72,-19]],"e":[28,16],"ei":52},
+  "43447":{"r":[[-24,94,-22,91,-13,90,-12,86,-14,83,-11,76,-10,71,-5,67,4,69,8,69,10,71,15,73,22,73,27,71,26,66,30,64,34,59,34,55,32,52,31,44,34,38,31,34,32,29,36,28,38,21,45,14,47,10,47,6,52,3,56,5,59,9,65,9,66,4,64,0,66,-2,66,-6,69,-11,69,-15,68,-18,74,-26,83,-32,87,-31,98,-41,100,-41,100,-48,87,-51,85,-56,81,-58,80,-62,82,-66,83,-71,80,-77,75,-82,67,-83,63,-90,58,-91,56,-93,50,-94,47,-91,46,-83,43,-79,38,-76,31,-77,27,-74,20,-75,19,-77,14,-74,12,-76,7,-74,3,-75,-7,-73,-9,-70,-13,-69,-18,-73,-22,-71,-27,-70,-34,-72,-36,-74,-38,-79,-38,-83,-41,-83,-45,-78,-58,-69,-59,-65,-67,-59,-77,-55,-83,-49,-88,-47,-94,-42,-98,-41,-97,-33,-100,-25,-98,-23,-97,-6,-95,-3,-96,1,-99,2,-98,9,-94,13,-91,14,-81,19,-70,19,-68,23,-66,25,-59,25,-57,26,-51,26,-49,29,-54,32,-62,32,-65,35,-60,38,-56,49,-55,59,-60,62,-65,69,-64,73,-62,74,-56,74,-53,72,-48,74,-42,78,-38,80,-35,79]],"e":[-8,-12],"ei":57},
+  "43468":{"r":[[93,35,78,25,63,6,75,-7,61,-20,48,-11,13,-36,14,-47,-33,-73,-45,-86,-52,-82,-71,-100,-93,-93,-90,-84,-65,-59,-67,-57,-23,-13,-7,0,5,15,10,26,-1,30,-1,47,-12,64,9,75,28,100,52,83,45,65,59,66,71,55,77,38]],"e":[44,32],"ei":31},
+  "43482":{"r":[[-11,-100,-24,-85,-29,-84,-30,-80,-47,-61,-47,-56,-42,-58,-33,-54,-33,-51,-43,-48,-51,-40,-53,-34,-50,-33,-53,-27,-58,-31,-63,-22,-60,-17,-59,-4,-46,-3,-55,8,-64,0,-62,10,-63,15,-65,17,-62,24,-64,32,-62,36,-46,41,-46,45,-42,48,-44,62,-44,72,-61,76,-59,79,-51,85,-44,86,-40,89,-36,94,-28,100,-24,97,-20,97,-17,94,-4,88,16,91,19,90,25,78,21,75,22,68,25,59,23,53,23,47,28,42,29,34,27,30,33,24,45,17,38,15,37,4,33,1,41,-8,44,-12,35,-27,38,-41,42,-45,46,-45,61,-51,65,-56,65,-60,57,-62,53,-60,49,-68,39,-70,35,-67,26,-70,18,-66,10,-70,6,-75,0,-74,-2,-67,-9,-60,-16,-62,-18,-68,-14,-76,-16,-79,-13,-85,-13,-89,-10,-91,-7,-96]],"e":[-4,-16],"ei":41},
+  "43484":{"r":[[21,97,67,86,67,57,73,19,62,11,61,-2,18,-16,13,-25,18,-50,8,-68,-2,-100,-22,-94,-15,-78,-23,-66,-19,-57,-35,-47,-42,-53,-55,-35,-59,-9,-73,-1,-58,21,-49,20,-51,40,-56,45,-47,58,-44,80,-21,96,12,100]],"e":[8,40],"ei":56},
+  "43501":{"r":[[40,100,64,93,68,83,75,81,84,86,77,75,70,77,61,68,62,60,71,53,77,39,54,11,45,4,40,-6,41,-16,34,-30,21,-28,10,-35,25,-53,17,-70,19,-75,14,-87,3,-100,-7,-93,-25,-83,-34,-81,-40,-85,-46,-81,-45,-73,-51,-67,-50,-47,-40,-47,-36,-37,-45,-30,-52,-32,-61,-29,-84,-29,-80,-11,-75,-12,-65,-6,-55,6,-46,5,-42,11,-43,25,-37,33,-42,40,-33,52,-36,58,-28,68,-25,79,-17,71,-9,69,4,88,11,87,15,81,27,76,30,89]],"e":[8,28],"ei":44},
+  "43505":{"r":[[-43,-97,-50,-96,-53,-100,-58,-100,-63,-96,-74,-96,-79,-91,-85,-81,-86,-74,-90,-69,-86,-64,-79,-55,-75,-52,-72,-44,-75,-39,-72,-31,-73,-24,-69,-17,-62,-11,-66,-6,-66,2,-58,6,-57,3,-50,3,-49,9,-41,15,-37,22,-34,22,-25,30,-21,30,-11,43,-14,46,-16,63,-11,65,-9,71,-12,80,-10,91,-4,95,1,91,5,83,13,79,17,83,24,82,33,83,39,91,50,96,59,93,70,98,80,100,85,95,90,92,89,87,84,80,86,71,85,67,87,62,83,58,83,52,79,49,70,48,62,30,58,29,60,20,48,9,40,11,40,15,32,17,24,12,16,16,16,23,11,25,7,21,5,15,-12,12,-20,3,-23,-5,-20,-9,-23,-12,-21,-18,-27,-25,-20,-28,-18,-35,-13,-43,-24,-60,-31,-64,-34,-69,-37,-80,-36,-86,-39,-92]],"e":[36,52],"ei":31},
+  "43506":{"r":[[75,65,66,56,64,33,70,21,89,11,89,0,80,-27,83,-34,75,-37,65,-52,60,-67,50,-76,39,-75,23,-82,16,-98,2,-100,-18,-79,-34,-49,-89,-22,-75,-6,-80,9,-73,17,-79,27,-72,45,-53,67,-12,75,-6,90,3,100,15,96,16,78,36,67,55,81,75,74]],"e":[0,8],"ei":66},
+  "43507":{"r":[[-77,-73,-79,-59,-73,-54,-70,-46,-70,-42,-60,-37,-59,-22,-61,-15,-68,-13,-69,-5,-74,3,-74,17,-69,23,-67,30,-68,37,-64,49,-61,55,-53,59,-41,79,-47,88,-48,95,-31,87,-23,73,-14,63,-7,64,-4,71,3,74,8,74,13,78,15,85,20,92,24,93,31,93,41,100,49,99,49,95,60,85,74,52,79,46,75,42,64,23,60,24,48,18,45,12,44,6,50,-3,45,-12,40,-14,44,-22,39,-40,28,-39,17,-40,14,-47,7,-54,5,-60,-3,-72,-8,-83,-8,-97,-10,-100,-16,-97,-23,-89,-35,-83,-41,-84,-43,-87,-61,-86,-66,-79]],"e":[-12,8],"ei":54},
+  "43510":{"r":[[-56,100,-38,100,-31,98,-26,99,-20,94,-22,87,-30,86,-30,71,-26,67,-27,61,-22,58,-18,61,-11,59,3,52,10,47,11,44,8,23,11,16,16,16,25,6,34,-2,29,-6,30,-18,29,-22,36,-32,42,-35,44,-39,49,-46,50,-54,57,-66,45,-69,24,-70,18,-67,11,-58,1,-61,-3,-73,-12,-78,-16,-83,-23,-85,-30,-91,-33,-100,-44,-91,-57,-94,-57,-82,-52,-74,-45,-67,-48,-55,-44,-49,-43,-34,-45,-21,-35,-27,-28,-23,-23,-16,-26,-9,-26,-4,-33,2,-31,15,-32,23,-37,34,-35,39,-40,42,-42,47,-42,59,-50,70,-48,76,-52,80,-50,89,-55,88]],"e":[0,-32],"ei":28},
+  "43511":{"r":[[-84,28,-79,36,-62,34,-53,38,-51,47,-39,50,-30,42,-27,50,-21,55,-15,56,-11,60,-4,65,0,75,9,78,15,71,20,68,38,69,49,71,54,66,66,66,71,62,75,62,79,66,86,65,86,51,90,45,92,38,98,36,100,29,99,16,90,10,90,7,87,0,82,-5,84,-18,79,-18,73,-21,60,-20,52,-22,48,-31,49,-35,50,-46,41,-56,33,-57,30,-64,18,-73,15,-72,10,-67,6,-72,3,-71,-1,-78,-20,-70,-28,-73,-38,-73,-45,-64,-60,-59,-69,-58,-74,-54,-74,-48,-82,-48,-86,-51,-85,-41,-83,-32,-93,-31,-99,-28,-98,-23,-94,-15,-93,-7,-100,2,-97,8,-97,15,-87,16,-82,20]],"e":[-8,-12],"ei":58},
+  "43512":{"r":[[-62,-38,-53,-19,-40,-2,-43,4,-38,19,-24,26,-24,39,-17,41,-14,51,-14,78,-3,77,4,97,9,100,23,95,29,90,33,97,42,86,41,74,44,68,50,64,48,59,52,48,53,39,51,25,59,18,59,13,62,6,57,-1,49,-6,39,0,41,-13,40,-29,36,-36,39,-48,31,-55,26,-64,26,-77,23,-88,11,-92,-9,-90,-16,-100,-24,-99,-34,-92,-46,-70,-54,-63,-53,-56,-58,-53,-55,-44]],"e":[-8,-32],"ei":44},
+  "43513":{"r":[[-11,-92,-11,-88,-16,-83,-30,-77,-35,-77,-39,-72,-42,-58,-33,-43,-36,-39,-44,-29,-40,-26,-39,-15,-32,-13,-45,-6,-50,0,-48,4,-49,12,-54,18,-54,24,-52,30,-56,39,-56,46,-52,50,-58,61,-49,69,-35,68,-31,78,-29,89,-26,96,-15,97,-12,99,-4,100,-1,95,0,84,7,84,5,79,6,71,11,69,17,59,18,52,33,33,43,29,46,20,50,20,52,15,56,11,58,6,56,0,47,-3,48,-12,40,-20,45,-30,42,-41,44,-45,34,-58,28,-72,20,-69,16,-72,10,-70,6,-82,2,-88,0,-95,0,-100,-3,-100,-9,-97]],"e":[-8,20],"ei":40},
+  "43514":{"r":[[-7,86,-4,91,4,93,8,99,18,96,26,100,31,96,42,95,40,88,42,80,49,74,56,69,58,62,50,56,48,45,51,37,49,31,43,29,46,13,49,9,39,-4,35,-4,26,-11,24,-11,20,-18,12,-25,11,-30,4,-30,3,-27,-5,-31,-5,-39,-1,-43,-8,-50,-12,-57,-11,-64,-14,-71,-11,-76,-14,-83,-18,-87,-24,-96,-29,-100,-30,-96,-36,-94,-41,-86,-40,-82,-41,-73,-37,-70,-45,-63,-52,-55,-56,-55,-58,-49,-56,-32,-57,-29,-50,-21,-47,-14,-48,-11,-43,0,-53,11,-46,16,-38,14,-34,23,-34,29,-31,35,-25,40,-11,57,-15,65,-20,70,-21,75,-15,80,-11,79]],"e":[8,24],"ei":35},
+  "43531":{"r":[[71,-100,40,-83,33,-75,19,-65,3,-60,-5,-52,-38,-50,-51,-62,-53,-70,-46,-87,-64,-90,-83,-75,-62,-59,-50,-54,-49,-43,-43,-40,-35,-22,-32,-8,-42,-6,-50,17,-45,20,-46,35,-60,54,-75,82,-71,87,-48,89,-41,92,-20,82,12,82,21,88,31,100,37,100,38,82,36,62,19,47,27,27,41,8,53,8,71,-14,72,-30,67,-34,69,-46,76,-53,74,-61,83,-80,71,-93]],"e":[8,-12],"ei":38}
 };
 for (const sh of Object.values(SHAPES)) {
   let minY = 0, maxY = 0, maxR = 0;
@@ -313,7 +412,7 @@ function unit(d) {
 }
 
 // 見た目の大きさ係数：面積の対数で 0.72〜1.32 に圧縮（厳密な比率ではない）
-const AREA_MIN = 5.72, AREA_MAX = 492.5;
+const AREA_MIN = 5.72, AREA_MAX = 700;   // 全県共通の基準（県をまたいでも大きさを比べられるように）
 function sizeOf(area) {
   return +(.72 + .6 * clamp(Math.log(area / AREA_MIN) / Math.log(AREA_MAX / AREA_MIN), 0, 1)).toFixed(3);
 }
@@ -336,7 +435,20 @@ function shapeSvg(u, cls = 'mini') {
 }
 const skillName = u => SKILLS_BY_ID[u.skillId].displayName;
 
-const ALL = assignAttrs(DATA.map(unit));
+// 県ごとの自治体一覧。属性は県ごとに判定する
+const ALL_BY_PREF = Object.fromEntries(Object.entries(PREFS).map(([k, p]) => [k, assignAttrs(p.data.map(d => ({ ...unit(d), pref: k })))]));
+const ALL = Object.values(ALL_BY_PREF).flat();   // 県をまたいで全自治体から選べる
+
+// ひらがな検索：カタカナはひらがなに直し、空白を除く。
+// 読みがなの先頭一致、または「し・まち・ちょう・むら・そん」を除いた読みの途中一致（例：あそ→南阿蘇村）、漢字名の一部一致で探す
+const toHira = s => String(s).replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60)).replace(/\s/g, '');
+const kanaStem = kana => kana.replace(/(し|まち|ちょう|むら|そん)$/, '');
+function searchTowns(list, q) {
+  const k = toHira(q);
+  if (!k) return [];
+  return list.filter(u => u.kana.startsWith(k) || kanaStem(u.kana).includes(k) || u.name.includes(k))
+    .sort((a, b) => (b.kana.startsWith(k) - a.kana.startsWith(k)) || a.kana.localeCompare(b.kana, 'ja'));
+}
 
 const isAlive = u => u.hp > 0;
 const shieldCap = u => Math.min(35, Math.round(u.maxHp * .3));
@@ -544,9 +656,9 @@ function rerollPoolPure(pool, picked, rivals, all, rand = Math.random) {
 }
 
 globalThis.Core = {
-  VERSION, PREF_NAME, DATA, ALL, SKILLS, SKILLS_BY_ID, POS, ROWS, TPS, TICK_LIMIT, SHIELD_BASE, SHIELD_TICKS,
+  VERSION, PREFS, ALL_BY_PREF, ALL, SKILLS, SKILLS_BY_ID, POS, ROWS, TPS, TICK_LIMIT, SHIELD_BASE, SHIELD_TICKS,
   SHAPES, sizeOf, shapeSvg, ATTRS, BEATS, ADV_MUL, DIS_MUL, TARGET_WEIGHT, REAR_BASIC_MUL,
-  affinity, affinityMul, assignAttrs, pickTarget, weakestAlly,
+  affinity, affinityMul, assignAttrs, pickTarget, weakestAlly, toHira, searchTowns,
   esc, rng, unit, skillName, calcDamage, createBattle, stepBattle, resolveTick, snapshotStart,
   runToEnd, isAlive, shieldCap, posOf, unitById, rerollPoolPure, shuffleWith
 };
@@ -556,18 +668,21 @@ globalThis.Core = {
 <script>
 const $ = s => document.querySelector(s), app = $('#app');
 const fmt = n => Math.round(n).toLocaleString('ja-JP');
-const byCode = new Map(ALL.map(u => [u.code, u]));
+const byCode = new Map(Object.values(ALL_BY_PREF).flat().map(u => [u.code, u]));
 const randSeed = () => Math.floor(Math.random() * 2147483647);
 const W = 1000, H = 640;   // Canvasの大きさ
+// 戦闘背景（画像生成AIで作成）。読み込めないときは従来の描画で代用する
+const BATTLE_BG = new Image();
+BATTLE_BG.src = 'assets/battle-bg.webp?v=0.7.0';
 
 // picked[0] が奥の段A、picked[1] が手前の段B。mySlots / rivalSlots はそれぞれの前衛・後衛
+const PREF_LABEL = Object.values(PREFS).map(p => p.name.replace(/[県府都道]$/, '')).join('・');   // 例：福岡・熊本
 let screen = 'title', pool = [], picked = [], rivals = [], mySlots = ['front', 'rear'], rivalSlots = ['front', 'rear'], seed = 1;
 let battle = null, view = null, paused = false, loopToken = 0;
 let playbackSpeed = .85;   // アプリ起動時に一度だけ初期化
 
 document.title = '自治体タッグバトル ' + VERSION;
 $('#verchip').textContent = `β ${VERSION} · 2対2`;
-$('#prefname').textContent = PREF_NAME;
 
 const attrTag = u => `<span class="attr attr-${u.attr}">${ATTR_ICON[u.attr]} ${u.attr}</span>`;
 const slotName = s => s === 'front' ? '前衛' : '後衛';
@@ -575,26 +690,27 @@ const rowName = i => i === 0 ? '奥の段' : '手前の段';
 const legend = () => `<div class="legend">相性：${ATTRS.map(a => `${ATTR_ICON[a]}${a}`).join(' → ')} → ${ATTR_ICON[ATTRS[0]]}${ATTRS[0]}（矢印の先の相手に強い。有利×${ADV_MUL}・不利×${DIS_MUL}）</div>`;
 
 function townCard(u) {
-  return `<button class="town ${picked.includes(u.code) ? 'sel' : ''}" data-pick="${u.code}">${shapeSvg(u)}<strong>${esc(u.name)}</strong><small>${attrTag(u)} 人口密度 県内${u.densityRank}位</small><small>高齢化率 ${u.elder_pct.toFixed(1)}% ｜ 密度 ${fmt(u.density)}/km²</small><span class="tag">★ ${esc(skillName(u))}</span><small>HP ${u.st.hp} · 攻 ${u.st.atk} · 守 ${u.st.def} · 速 ${u.st.spd} · 魔 ${u.st.mag}</small></button>`;
+  return `<button class="town ${picked.includes(u.code) ? 'sel' : ''}" data-pick="${u.code}">${shapeSvg(u)}<strong>${esc(u.name)}</strong><small>${attrTag(u)} ${PREFS[u.pref].name}内 密度${u.densityRank}位</small><small>高齢化率 ${u.elder_pct.toFixed(1)}% ｜ 密度 ${fmt(u.density)}/km²</small><span class="tag">★ ${esc(skillName(u))}</span><small>HP ${u.st.hp} · 攻 ${u.st.atk} · 守 ${u.st.def} · 速 ${u.st.spd} · 魔 ${u.st.mag}</small></button>`;
 }
 function teamLine(list, slots, red) {
   return list.map((u, i) => `<span class="chip rival">${shapeSvg(u, red ? 'chipsvg red' : 'chipsvg')}${esc(u.name)} ${attrTag(u)} <small>${rowName(i)}・${slotName(slots[i])}</small></span>`).join(' ');
 }
 
 function render() {
+  $('#prefname').textContent = PREF_LABEL;
   if (screen === 'title') {
-    app.innerHTML = `<section class="hero"><img class="emblem" src="assets/logo-emblem.webp?v=0.6.1" alt="自治体タッグバトルの紋章"><h1 class="gametitle">自治体タッグバトル<small>${PREF_NAME}編</small></h1><h2>まちの数字が、必殺技になる。</h2><p>${PREF_NAME}の${ALL.length}市町村から2体を選び、それぞれ前衛か後衛かを決める。<br>都会・郊外・田舎の三すくみ。戦闘は完全オート。</p><button class="primary" id="new">ドラフト開始 →</button></section>`;
+    app.innerHTML = `<section class="hero"><img class="emblem" src="assets/logo-emblem.webp?v=0.7.0" alt="自治体タッグバトルの紋章"><h1 class="gametitle">自治体タッグバトル<small>${PREF_LABEL}編</small></h1><h2>まちの数字が、必殺技になる。</h2>
+      <p>${Object.values(PREFS).map(p => p.name).join('・')}の${ALL.length}市町村から2体を選んでタッグを組む。県をまたいだタッグもOK。<br>都会・郊外・田舎の三すくみ。戦闘は完全オート。</p><button class="primary" id="new">ドラフト開始 →</button></section>`;
     $('#new').onclick = newGame;
   }
   if (screen === 'draft') {
     app.innerHTML = `<h2>① 2つの市町村を選ぼう <small>${picked.length}/2</small></h2>
       <section class="panel"><b>相手チーム（先に公開）</b><div class="row" style="margin-top:6px">${teamLine(rivals, rivalSlots, true)}</div><div style="margin-top:8px">${legend()}</div></section>
       <div class="panel"><div class="row">
-        <label>好きな市町村を指名 <select id="direct"><option value="">選択してください</option>${ALL.filter(u => !rivals.some(r => r.code === u.code)).map(u => `<option value="${u.code}">${esc(u.name)}</option>`).join('')}</select></label>
-        <button id="add">候補に追加</button>
+        <label class="search">好きな市町村を指名 <input id="q" type="search" inputmode="search" autocomplete="off" placeholder="ひらがなで検索（例：くるめ）"></label>
         <button id="reroll">候補を再抽選（選択・相手は保持）</button>
         <button id="restart">最初からやり直す</button>
-      </div></div>
+      </div><div class="hits" id="hits"></div></div>
       <section class="grid" id="picklist">${pool.map(townCard).join('')}</section>
       <div class="panel status"><div>選択：${picked.map(c => esc(byCode.get(c).name)).join(' ＋ ') || 'まだ選択していません'}</div><button class="primary" id="next" ${picked.length !== 2 ? 'disabled' : ''}>配置を決める →</button></div>`;
     document.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
@@ -603,13 +719,9 @@ function render() {
       else if (picked.length < 2) picked.push(id);
       render();
     });
-    $('#add').onclick = () => {
-      const id = $('#direct').value;
-      if (!id) return;
-      if (!pool.some(u => u.code === id)) pool[pool.findIndex(u => !picked.includes(u.code))] = byCode.get(id);
-      if (!picked.includes(id) && picked.length < 2) picked.push(id);
-      render();
-    };
+    // 入力のたびに検索結果だけを書き換える（入力欄は作り直さないので文字入力が途切れない）
+    $('#q').oninput = () => showHits($('#q').value);
+    if (lastQuery) { $('#q').value = lastQuery; showHits(lastQuery); }
     $('#reroll').onclick = rerollPool;
     $('#restart').onclick = newGame;
     $('#next').onclick = () => { mySlots = ['front', 'rear']; screen = 'formation'; render(); };
@@ -657,11 +769,31 @@ function render() {
 function newGame() {
   seed = randSeed();
   const a = shuffleWith(ALL);
+  lastQuery = '';
   rivals = a.slice(0, 2); pool = a.slice(2, 8); picked = [];
   rivalSlots = [Math.random() < .5 ? 'front' : 'rear', Math.random() < .5 ? 'front' : 'rear'];
   screen = 'draft'; render();
 }
 function rerollPool() { pool = rerollPoolPure(pool, picked, rivals, ALL); render(); }
+
+// 検索結果：押すと候補に入り、選択枠が空いていればそのまま選ぶ
+let lastQuery = '';
+function showHits(q) {
+  lastQuery = q;
+  const hits = searchTowns(ALL, q).filter(u => !rivals.some(r => r.code === u.code)).slice(0, 12);
+  $('#hits').innerHTML = !toHira(q) ? '' : hits.length
+    ? hits.map(u => `<button class="hit ${picked.includes(u.code) ? 'on' : ''}" data-hit="${u.code}">${shapeSvg(u, 'chipsvg')}${esc(u.name)}<small>${esc(u.kana)}・${PREFS[u.pref].name}</small></button>`).join('')
+    : '<small>見つかりません（相手チームの自治体は選べません）</small>';
+  document.querySelectorAll('[data-hit]').forEach(b => b.onclick = () => {
+    const id = b.dataset.hit;
+    if (!pool.some(u => u.code === id)) {
+      const i = pool.findIndex(u => !picked.includes(u.code));
+      if (i >= 0) pool[i] = byCode.get(id);
+    }
+    if (!picked.includes(id) && picked.length < 2) picked.push(id);
+    render();
+  });
+}
 
 function startBattle(s) {
   seed = s;
@@ -820,7 +952,20 @@ function drawPos(u) {
 function draw() {
   const c = $('#arena'), ctx = c.getContext('2d'), b = battle, v = view;
   ctx.clearRect(0, 0, W, H);
-  // 疑似遠近感。奥の足場を狭く・薄く描く
+  if (BATTLE_BG.complete && BATTLE_BG.naturalWidth) {
+    ctx.drawImage(BATTLE_BG, 0, 0, W, H);
+    ctx.fillStyle = 'rgba(6,10,36,.22)'; ctx.fillRect(0, 0, W, H);   // キャラが目立つよう少し暗く
+  } else drawFallbackField(ctx);
+  ctx.fillStyle = '#dff0ff'; ctx.textAlign = 'center'; ctx.font = 'bold 21px DotGothic16, system-ui';
+  ctx.lineJoin = 'round'; ctx.lineWidth = 5; ctx.strokeStyle = '#0a1030';
+  ctx.strokeText('味方', 108, 43); ctx.fillText('味方', 108, 43); ctx.strokeText('敵', 892, 43); ctx.fillText('敵', 892, 43);
+  const timer = Math.max(0, 50 - v.dispTick / TPS).toFixed(1) + '秒';
+  ctx.fillStyle = '#ffe0a0'; ctx.strokeText(timer, 500, 43); ctx.fillText(timer, 500, 43);
+  drawUnits(ctx, b, v);
+}
+
+// 背景画像が使えないときの代わりの床（疑似遠近感。奥の足場を狭く・薄く描く）
+function drawFallbackField(ctx) {
   const sky = ctx.createLinearGradient(0, 0, 0, H);
   sky.addColorStop(0, '#2d3d55'); sky.addColorStop(.45, '#3b516b'); sky.addColorStop(1, '#182b43');
   ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
@@ -830,10 +975,9 @@ function draw() {
   for (let i = 0; i <= 12; i++) { ctx.beginPath(); ctx.moveTo(215 + i * 47.5, 177); ctx.lineTo(-80 + i * 96.7, H); ctx.stroke(); }
   for (const y of [194, 222, 258, 306, 370, 452, 552]) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
   ctx.restore();
-  ctx.fillStyle = '#dff0ff'; ctx.textAlign = 'center'; ctx.font = 'bold 21px DotGothic16, system-ui';
-  ctx.fillText('味方', 108, 43); ctx.fillText('敵', 892, 43);
-  ctx.fillStyle = '#ffe0a0'; ctx.fillText(Math.max(0, 50 - v.dispTick / TPS).toFixed(1) + '秒', 500, 43);
+}
 
+function drawUnits(ctx, b, v) {
   const a = v.active, ev = a ? a.ev : null, f = a ? Math.min(1, a.elapsed / Math.max(1, a.dur)) : 0;
 
   // 描画対象：倒れていないユニット＋KO演出中のユニット。奥（yが小さい）から順に描く
@@ -859,17 +1003,27 @@ function draw() {
     const eg = clamp(sh.ei / 100 * R * .38, 5 * scale, 14 * scale), er = clamp(eg * .36, 2.6, 5 * scale);
     ctx.fillStyle = '#183447'; ctx.beginPath();
     ctx.arc(ex - eg, ey, er, 0, Math.PI * 2); ctx.arc(ex + eg, ey, er, 0, Math.PI * 2); ctx.fill();
-    // 名前（属性アイコンつき）
-    ctx.textAlign = 'center'; ctx.font = `bold ${Math.round(24 * scale)}px DotGothic16, system-ui`; ctx.fillStyle = '#fff';
-    ctx.shadowColor = '#142338'; ctx.shadowBlur = 4;
-    ctx.fillText(`${ATTR_ICON[u.d.attr]}${u.d.name}`, x, Math.min(H - 8, y + sh.maxY / 100 * R + 28 * scale)); ctx.shadowBlur = 0;
-    // HPバー
+    // 盾の輪は本体の外側に描く
+    if (d.shield > 0) { ctx.strokeStyle = '#9cdeff'; ctx.lineWidth = 4; ctx.globalAlpha *= .9; ctx.beginPath(); ctx.arc(x, y, sh.maxR / 100 * R * .85 + 8 * scale, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.restore();
+  }
+
+  // 名前とHPバーは全員の体を描いたあとにまとめて描く（重なっても体に隠れない）
+  // 奥の段は名前をHPバーの上に、手前の段は体の下に出し、上下の段で文字がぶつからないようにする
+  for (const { u, p } of list) {
+    const d = v.disp.get(u.id), { x, y, scale } = p;
+    const sh = u.d.shape, R = SHAPE_BASE_R * u.d.size * scale;
+    ctx.save();
+    if (ev && ev.type === 'ko' && ev.targetId === u.id) ctx.globalAlpha = Math.max(0, 1 - f * 1.4);
     const hpw = 104 * scale, hh = 11 * scale, barY = y + sh.minY / 100 * R - 20 * scale;
     ctx.fillStyle = '#1a2d43'; ctx.fillRect(x - hpw / 2, barY, hpw, hh);
     ctx.fillStyle = u.side === 'blue' ? '#8bdeb7' : '#f3bf8f'; ctx.fillRect(x - hpw / 2, barY, hpw * (d.hp / u.maxHp), hh);
-    ctx.strokeStyle = '#142335'; ctx.lineWidth = 1.5; ctx.strokeRect(x - hpw / 2, barY, hpw, hh);
-    // 盾の輪は本体の外側に描く
-    if (d.shield > 0) { ctx.strokeStyle = '#9cdeff'; ctx.lineWidth = 4; ctx.globalAlpha *= .9; ctx.beginPath(); ctx.arc(x, y, sh.maxR / 100 * R * .85 + 8 * scale, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.strokeStyle = '#0a1030'; ctx.lineWidth = 2; ctx.strokeRect(x - hpw / 2, barY, hpw, hh);
+    const nameY = u.row === 'far' ? barY - 8 * scale : Math.min(H - 8, y + sh.maxY / 100 * R + 28 * scale);
+    ctx.textAlign = 'center'; ctx.font = `bold ${Math.round(24 * scale)}px DotGothic16, system-ui`;
+    ctx.lineJoin = 'round'; ctx.lineWidth = 5; ctx.strokeStyle = '#0a1030';
+    const label = `${ATTR_ICON[u.d.attr]}${u.d.name}`;
+    ctx.strokeText(label, x, nameY); ctx.fillStyle = '#fff'; ctx.fillText(label, x, nameY);
     ctx.restore();
   }
 
@@ -898,7 +1052,7 @@ function draw() {
       const txt = ev.type === 'damage' ? `-${ev.amount}` + (ev.shieldAbsorbed ? `（盾${ev.shieldAbsorbed}）` : '') : ev.type === 'heal' ? `+${ev.amount}` : `盾+${ev.amount}`;
       // 数字は受け手のHPバーより上に出す
       const tu = unitById(b, ev.targetId), tR = SHAPE_BASE_R * tu.d.size * t.scale;
-      const ty = Math.max(70, t.y + tu.d.shape.minY / 100 * tR - 32 * t.scale - g * 14);
+      const ty = Math.max(70, t.y + tu.d.shape.minY / 100 * tR - (tu.row === 'far' ? 60 : 32) * t.scale - g * 14);
       ctx.fillText(txt, t.x, ty);
       if (ev.affinity) {   // 相性の表示
         ctx.font = 'bold 22px DotGothic16, system-ui'; ctx.fillStyle = ev.affinity === 'adv' ? '#ffb15c' : '#a9b8c8';
