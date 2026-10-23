@@ -33,7 +33,7 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
   const samePos = (p, q) => p && q && p.x === q.x && p.y === q.y && p.scale === q.scale;
 
   // テスト用の架空ユニット（属性は既定で郊外＝同属性どうしは相性なし）
-  const mk = (code, name, type, st = {}, attr = '郊外') => ({ code, name, type, attr, skillId: C.SKILLS[type].id, st: { hp: 100, atk: 100, def: 100, spd: 100, mag: 100, ...st } });
+  const mk = (code, name, skillId, st = {}, attr = '郊外') => ({ code, name, attr, skillId, st: { hp: 100, atk: 100, def: 100, spd: 100, mag: 100, ...st } });
   const team = (a, sa, b2, sb) => [{ d: a, slot: sa }, { d: b2, slot: sb }];
   const evsAt = (b, t) => b.log.filter(e => e.tick === t);
   const real = name => C.ALL.find(u => u.name === name);
@@ -41,8 +41,8 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
 
   test('T01', 'KO表示はそのユニットの固定位置に出る', () => {
     const b = C.createBattle(
-      team(mk('1', '青奥', 'balanced', { hp: 20 }), 'rear', mk('2', '青手前', 'balanced', { hp: 20 }), 'front'),
-      team(mk('3', '赤奥', 'balanced', { atk: 300, hp: 999 }), 'front', mk('4', '赤手前', 'balanced', { atk: 300, hp: 999 }), 'front'), 1);
+      team(mk('1', '青奥', 'satellite_chase', { hp: 20 }), 'rear', mk('2', '青手前', 'satellite_chase', { hp: 20 }), 'front'),
+      team(mk('3', '赤奥', 'satellite_chase', { atk: 300, hp: 999 }), 'front', mk('4', '赤手前', 'satellite_chase', { atk: 300, hp: 999 }), 'front'), 1);
     C.runToEnd(b);
     const kos = b.log.filter(e => e.type === 'ko');
     assert(kos.length === 2, 'KOが2件でない');
@@ -52,8 +52,8 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
 
   test('T02', '同tickで2体同時KO → 各自の位置、前に出る動きはなし', () => {
     const b = C.createBattle(
-      team(mk('1', '青奥', 'balanced'), 'front', mk('2', '青手前', 'balanced'), 'rear'),
-      team(mk('3', '赤奥', 'balanced'), 'front', mk('4', '赤手前', 'balanced'), 'front'), 1);
+      team(mk('1', '青奥', 'satellite_chase'), 'front', mk('2', '青手前', 'satellite_chase'), 'rear'),
+      team(mk('3', '赤奥', 'satellite_chase'), 'front', mk('4', '赤手前', 'satellite_chase'), 'front'), 1);
     b.tick = 1;
     const start = C.snapshotStart(b);
     const [bf, br, rf] = b.units;
@@ -69,8 +69,8 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
 
   test('T06', '同tickで双方の最後の1体がKO → 引き分け', () => {
     const b = C.createBattle(
-      team(mk('1', '青奥', 'balanced'), 'front', mk('2', '青手前', 'balanced'), 'rear'),
-      team(mk('3', '赤奥', 'balanced'), 'front', mk('4', '赤手前', 'balanced'), 'rear'), 1);
+      team(mk('1', '青奥', 'satellite_chase'), 'front', mk('2', '青手前', 'satellite_chase'), 'rear'),
+      team(mk('3', '赤奥', 'satellite_chase'), 'front', mk('4', '赤手前', 'satellite_chase'), 'rear'), 1);
     b.units[1].hp = 0; b.units[3].hp = 0;   // 既にそれぞれ1体ずつ倒れている
     b.tick = 1;
     const start = C.snapshotStart(b);
@@ -86,8 +86,8 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
 
   // 4体とも同じ速度 → 毎回全員が同じtickに行動する
   const mirror = (hp, atk) => C.createBattle(
-    team(mk('1', '青奥', 'balanced', { hp, atk }), 'front', mk('2', '青手前', 'balanced', { hp, atk }), 'rear'),
-    team(mk('3', '赤奥', 'balanced', { hp, atk }), 'front', mk('4', '赤手前', 'balanced', { hp, atk }), 'rear'), 7);
+    team(mk('1', '青奥', 'satellite_chase', { hp, atk }), 'front', mk('2', '青手前', 'satellite_chase', { hp, atk }), 'rear'),
+    team(mk('3', '赤奥', 'satellite_chase', { hp, atk }), 'front', mk('4', '赤手前', 'satellite_chase', { hp, atk }), 'rear'), 7);
 
   test('T07', '同tickの複数行動がすべて別イベントで残る', () => {
     const b = C.runToEnd(mirror(999, 100));
@@ -101,7 +101,7 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
   test('T08', '致死ダメージの数値がイベントに残り、KO後の行動はない', () => {
     let checked = 0;
     for (let s = 1; s <= 30; s++) {
-      const b = C.runToEnd(C.createBattle(realTeam('福岡市', '東峰村'), realTeam('北九州市', '赤村', 'rear', 'front'), s));
+      const b = C.runToEnd(C.createBattle(realTeam('福岡市東区', '東峰村'), realTeam('北九州市小倉北区', '赤村', 'rear', 'front'), s));
       for (const ko of b.log.filter(e => e.type === 'ko')) {
         const hits = b.log.filter(e => e.type === 'damage' && e.tick === ko.tick && e.targetId === ko.targetId);
         assert(hits.length && hits.every(h => h.amount > 0), 'KO攻撃の数値がない');
@@ -115,7 +115,7 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
 
   test('T10', '同編成・同seedを100回 → ログ・HP・勝敗・最終tickが完全一致', () => {
     const run = () => {
-      const b = C.runToEnd(C.createBattle(realTeam('北九州市', '東峰村', 'front', 'front'), realTeam('福岡市', '八女市', 'rear', 'front'), 12345));
+      const b = C.runToEnd(C.createBattle(realTeam('北九州市小倉北区', '東峰村', 'front', 'front'), realTeam('福岡市博多区', '八女市', 'rear', 'front'), 12345));
       return JSON.stringify({ log: b.log, hp: b.units.map(u => u.hp), w: b.winner, t: b.endTick });
     };
     const ref = run();
@@ -145,10 +145,10 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
     return '200回';
   });
 
-  // 盾のテスト用：防御型＋HPの多い相方（盾は HP割合の低い防御型自身に張られる）、ほぼ無害な相手で長期戦にする
+  // 盾のテスト用：森の加護（味方2体に盾16）＋HPの多い相方、ほぼ無害な相手で長期戦にする
   const shieldBattle = (spd = 100) => C.createBattle(
-    team(mk('1', '盾', 'wide', { hp: 120, spd }), 'front', mk('2', '相方', 'balanced', { hp: 5000 }), 'rear'),
-    team(mk('3', '赤奥', 'balanced', { atk: 1, hp: 5000 }), 'front', mk('4', '赤手前', 'balanced', { atk: 1, hp: 5000 }), 'front'), 3);
+    team(mk('1', '森', 'forest_aegis', { hp: 120, spd }), 'front', mk('2', '相方', 'satellite_chase', { hp: 5000, spd: 1 }), 'rear'),
+    team(mk('3', '赤奥', 'satellite_chase', { atk: 1, hp: 5000 }), 'front', mk('4', '赤手前', 'satellite_chase', { atk: 1, hp: 5000 }), 'front'), 3);
 
   test('T13', '盾を連発しても上限以内・加算蓄積しない', () => {
     const b = shieldBattle(); let maxSeen = 0;
@@ -156,17 +156,17 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
       C.stepBattle(b);
       for (const u of b.units) if (u.shield) {
         maxSeen = Math.max(maxSeen, u.shield.amount);
-        assert(u.shield.amount <= Math.min(C.shieldCap(u), C.SHIELD_BASE), `盾 ${u.shield.amount} が上限超過`);
+        assert(u.shield.amount <= Math.min(C.shieldCap(u), 16), `盾 ${u.shield.amount} が上限超過`);
       }
     }
-    assert(b.log.filter(e => e.type === 'shield').length >= 2, '盾が2回以上張られていない');
+    assert(b.log.filter(e => e.type === 'shield').length >= 4, '盾が2回以上張られていない');
     return `最大 ${maxSeen}`;
   });
 
   test('T14', '8ゲーム秒で盾が期限切れになる', () => {
     const b = C.runToEnd(shieldBattle());
     const sh = b.log.find(e => e.type === 'shield');
-    const end = b.log.find(e => e.type === 'shield_end' && e.tick > sh.tick);
+    const end = b.log.find(e => e.type === 'shield_end' && e.targetId === sh.targetId && e.tick > sh.tick);
     assert(end, '期限切れイベントがない');
     assert(end.tick === sh.tick + C.SHIELD_TICKS, `期限切れtick ${end.tick} ≠ ${sh.tick + C.SHIELD_TICKS}`);
     return `付与 ${sh.tick} → 消滅 ${end.tick}`;
@@ -174,14 +174,14 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
 
   test('T15', '盾が十分残っている時はSPを保持して通常攻撃', () => {
     const b = shieldBattle(300); let checked = 0;
-    const wide = b.units[0];
+    const me = b.units[0];
     while (!b.done) {
-      const preSp = wide.sp, preShield = wide.shield ? wide.shield.amount : 0;
+      const preSp = me.sp, enough = b.units.filter(u => u.side === 'blue').every(u => u.shield && u.shield.amount >= 8);
       const evs = C.stepBattle(b);
-      const act = evs.find(e => e.actorId === wide.id);
-      if (act && preSp >= 100 && preShield >= C.SHIELD_BASE / 2) {
+      const act = evs.find(e => e.actorId === me.id);
+      if (act && preSp >= 100 && enough) {
         assert(act.skillId === 'basic', '盾残量が十分なのに必殺技を使った');
-        assert(wide.sp === 100, 'SPが保持されていない');
+        assert(me.sp === 100, 'SPが保持されていない');
         checked++;
       }
     }
@@ -191,29 +191,29 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
 
   test('T17', '技の表示名を変えても判定・ダメージは不変', () => {
     const run = () => {
-      const b = C.runToEnd(C.createBattle(realTeam('東峰村', '添田町'), realTeam('福岡市', '春日市'), 99));
+      const b = C.runToEnd(C.createBattle(realTeam('東峰村', '添田町'), realTeam('福岡市中央区', '春日市'), 99));
       return JSON.stringify(b.log.map(({ label, ...rest }) => rest)) + b.winner;
     };
-    const before = run(), orig = C.SKILLS.elder.displayName;
-    C.SKILLS.elder.displayName = 'テスト用の別名';
+    const before = run(), orig = C.SKILLS.elder_snipe.displayName;
+    C.SKILLS.elder_snipe.displayName = 'テスト用の別名';
     const after = run();
-    C.SKILLS.elder.displayName = orig;
+    C.SKILLS.elder_snipe.displayName = orig;
     assert(before === after, '表示名変更で結果が変わった');
-    assert(before.includes('elder_magic'), '大魔法が一度も使われていない');
+    assert(before.includes('elder_snipe'), '狙撃が一度も使われていない');
   });
 
-  test('T18', '大魔法はMAGとともに増加し、ATKには影響されない', () => {
+  test('T18', '長老の狙撃はMAGとともに増加し、ATKには影響されない', () => {
     let prev = 0;
     for (let mag = 75; mag <= 130; mag++) {
       const d = C.calcDamage(mag, 100, 1.9, .5);
       assert(d >= prev, `MAG ${mag} で減少`); prev = d;
     }
     const firstMagic = st => {
-      const b = C.createBattle(team(mk('1', '長老', 'elder', st), 'front', mk('2', '後', 'balanced'), 'rear'),
-        team(mk('3', '赤', 'balanced', { hp: 999 }), 'front', mk('4', '赤後', 'balanced', { hp: 999 }), 'rear'), 11);
+      const b = C.createBattle(team(mk('1', '長老', 'elder_snipe', st), 'front', mk('2', '後', 'satellite_chase'), 'rear'),
+        team(mk('3', '赤', 'satellite_chase', { hp: 999 }), 'front', mk('4', '赤後', 'satellite_chase', { hp: 999 }), 'rear'), 11);
       b.units[0].sp = 100;
-      while (!b.log.some(e => e.skillId === 'elder_magic')) C.stepBattle(b);
-      return b.log.find(e => e.skillId === 'elder_magic').amount;
+      while (!b.log.some(e => e.skillId === 'elder_snipe')) C.stepBattle(b);
+      return b.log.find(e => e.skillId === 'elder_snipe').amount;
     };
     const lo = firstMagic({ mag: 80 }), hi = firstMagic({ mag: 120 });
     assert(hi > lo, `MAG高で威力が上がらない ${lo}→${hi}`);
@@ -228,7 +228,7 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
   });
 
   test('T25', '360戦（配置4パターン混在）：例外・未完了なし、イベント順序が正しい', () => {
-    const order = { shield_end: 0, damage: 1, heal: 1, shield: 1, ko: 2, victory: 3 };
+    const order = { shield_end: 0, buff_end: 0, damage: 1, heal: 1, shield: 1, buff: 1, guts: 2, ko: 2, victory: 3 };
     const r = { r: 424242 }, wins = { blue: 0, red: 0, draw: 0 };
     const slot = () => C.rng(r) < .5 ? 'front' : 'rear';
     for (let i = 0; i < 360; i++) {
@@ -271,20 +271,20 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
     return `${everyone.length}件（${Object.values(C.PREFS).map(p => p.name + p.data.length).join('・')}）・輪 ${rings}個（島を含む）`;
   });
 
-  test('T28', '属性：人口密度の順位で県ごとに3等分（福岡20・20・20、熊本15・15・15）', () => {
+  test('T28', '属性：人口密度の順位で県ごとに3等分（福岡24・24・24、熊本16・16・17）', () => {
     const F = C.ALL_BY_PREF['40'];
     const cnt = { 都会: 0, 郊外: 0, 田舎: 0 };
     for (const u of F) cnt[u.attr]++;
-    assert(cnt.都会 === 20 && cnt.郊外 === 20 && cnt.田舎 === 20, JSON.stringify(cnt));
+    assert(cnt.都会 === 24 && cnt.郊外 === 24 && cnt.田舎 === 24, JSON.stringify(cnt));
     const ranks = F.map(u => u.densityRank).sort((a, b) => a - b);
-    assert(ranks.every((r, i) => r === i + 1), '県内順位が1〜60になっていない');
+    assert(ranks.every((r, i) => r === i + 1), '県内順位が1〜72になっていない');
     const minCity = Math.min(...F.filter(u => u.attr === '都会').map(u => u.density));
     const maxSub = Math.max(...F.filter(u => u.attr === '郊外').map(u => u.density));
     assert(minCity > maxSub, '都会と郊外の境目が逆転');
     // 熊本県（45）も1/3ずつ
     const ck = { 都会: 0, 郊外: 0, 田舎: 0 };
     for (const u of C.ALL_BY_PREF['43']) ck[u.attr]++;
-    assert(ck.都会 === 15 && ck.郊外 === 15 && ck.田舎 === 15, '熊本 ' + JSON.stringify(ck));
+    assert(ck.都会 === 16 && ck.郊外 === 16 && ck.田舎 === 17, '熊本 ' + JSON.stringify(ck));
     // 他県の数（45）でも1/3ずつ
     const fake = Array.from({ length: 45 }, (_, i) => ({ density: i * 10 + 1 }));
     const c2 = { 都会: 0, 郊外: 0, 田舎: 0 };
@@ -300,8 +300,8 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
     assert(C.affinityMul('adv') === 1.3 && C.affinityMul('dis') === .8 && C.affinityMul(null) === 1, '倍率が違う');
     // 実戦でも相性が記録され、威力に反映される
     const dmg = (atkAttr, defAttr) => {
-      const b = C.createBattle(team(mk('1', '青', 'balanced', { atk: 300 }, atkAttr), 'front', mk('2', '青2', 'balanced', { spd: 1 }, atkAttr), 'front'),
-        team(mk('3', '赤', 'balanced', { hp: 999, spd: 1 }, defAttr), 'front', mk('4', '赤2', 'balanced', { hp: 999, spd: 1 }, defAttr), 'front'), 5);
+      const b = C.createBattle(team(mk('1', '青', 'satellite_chase', { atk: 300 }, atkAttr), 'front', mk('2', '青2', 'satellite_chase', { spd: 1 }, atkAttr), 'front'),
+        team(mk('3', '赤', 'satellite_chase', { hp: 999, spd: 1 }, defAttr), 'front', mk('4', '赤2', 'satellite_chase', { hp: 999, spd: 1 }, defAttr), 'front'), 5);
       while (!b.log.some(e => e.actorId === 'blue-far')) C.stepBattle(b);
       return b.log.find(e => e.actorId === 'blue-far');
     };
@@ -324,8 +324,8 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
 
   test('T31', '後衛の通常攻撃は遠距離・威力0.8倍、前衛は体当たり', () => {
     const first = slot => {
-      const b = C.createBattle(team(mk('1', '青', 'balanced', { atk: 300 }), slot, mk('2', '青2', 'balanced', { spd: 1 }), 'front'),
-        team(mk('3', '赤', 'balanced', { hp: 999, spd: 1 }), 'front', mk('4', '赤2', 'balanced', { hp: 999, spd: 1 }), 'front'), 8);
+      const b = C.createBattle(team(mk('1', '青', 'satellite_chase', { atk: 300 }), slot, mk('2', '青2', 'satellite_chase', { spd: 1 }), 'front'),
+        team(mk('3', '赤', 'satellite_chase', { hp: 999, spd: 1 }), 'front', mk('4', '赤2', 'satellite_chase', { hp: 999, spd: 1 }), 'front'), 8);
       while (!b.log.some(e => e.actorId === 'blue-far')) C.stepBattle(b);
       return b.log.find(e => e.actorId === 'blue-far');
     };
@@ -350,10 +350,10 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
 
   test('T33', '熊本県：データの範囲と、熊本の自治体どうしの戦闘', () => {
     const K = C.ALL_BY_PREF['43'];
-    assert(K.length === 45, '熊本の件数 ' + K.length);
+    assert(K.length === 49, '熊本の件数 ' + K.length);
     assert(K.every(u => u.pref === '43' && u.population > 0 && u.area_km2 > 0 && u.st.hp > 0), 'データ不正');
     const k = n => K.find(u => u.name === n);
-    assert(k('熊本市').attr === '都会' && k('五木村').attr === '田舎', '属性が想定と違う');
+    assert(k('熊本市中央区').attr === '都会' && k('五木村').attr === '田舎', '属性が想定と違う');
     assert(k('天草市').size === 1.32 || k('天草市').size > 1.3, '天草市の大きさ ' + k('天草市').size);
     let n = 0;
     for (let s = 1; s <= 50; s++) {
@@ -361,31 +361,184 @@ td,th{border:1px solid #3a5066;padding:6px 8px;text-align:left;font-size:14px;ve
       const b = C.runToEnd(C.createBattle(team(p[0], 'front', p[1], 'rear'), team(p[2], 'rear', p[3], 'front'), s));
       assert(b.done, '未完了'); n++;
     }
-    return `45件・${n}戦 完了`;
+    return `49件・${n}戦 完了`;
   });
 
-  test('T34', 'ひらがな検索：読みがな・カタカナ・漢字で探せる。全105件に読みがながある', () => {
-    assert(C.ALL.length === 105 && C.ALL.every(u => /^[ぁ-ゖー]+$/.test(u.kana)), '読みがなが欠けている');
+  test('T34', 'ひらがな検索：読みがな・カタカナ・漢字で探せる。全121件に読みがながある', () => {
+    assert(C.ALL.length === 121 && C.ALL.every(u => /^[ぁ-ゖー]+$/.test(u.kana)), '読みがなが欠けている');
     assert(new Set(C.ALL.map(u => u.name)).size === C.ALL.length, '県をまたいで同じ名前がある');
     const names = q => C.searchTowns(C.ALL, q).map(u => u.name);
     assert(names('くるめ')[0] === '久留米市', 'くるめ');
-    assert(names('クマモト')[0] === '熊本市', 'カタカナ');
+    assert(names('クマモト').length === 5 && names('クマモト').every(n => n.startsWith('熊本市')), 'カタカナ');
+    assert(names('ちゅうおう').join() === '熊本市中央区,福岡市中央区', '区名で探せない ' + names('ちゅうおう'));
     assert(names('のおがた')[0] === '直方市', '難読地名');
     const ama = names('天草');
     assert(ama.includes('天草市') && ama.includes('上天草市') && ama.length === 2, '漢字 ' + ama);
     assert(names('あまくさ')[0] === '天草市', '前方一致を先に');
     assert(names('').length === 0 && names(' ').length === 0, '空欄で全件出る');
-    assert(names('ふくおか').includes('福岡市'), 'ふくおか');
+    assert(names('ふくおか').includes('福岡市東区') && names('きたきゅうしゅう').length === 7, '市名から区を探せない');
     assert(!names('くま').includes('苓北町'), '「〜まち」にまたがって一致した');
     const aso = names('あそ');
     assert(aso[0] === '阿蘇市' && aso.includes('南阿蘇村'), '途中一致 ' + aso);
     return `くるめ→${names('くるめ')[0]}／あまくさ→${names('あまくさ').join('・')}`;
   });
 
+  // 技のテスト用：術者（奥・速い）がSP満タンで最初に技を出す。他の3体はほとんど動かない
+  const fire = (skillId, o = {}) => {
+    const b = C.createBattle(
+      team(mk('1', '術者', skillId, { spd: 300, ...(o.st || {}) }), o.s1 || 'front', mk('2', '相方', 'satellite_chase', { spd: 1, hp: 200 }), 'rear'),
+      team(mk('3', '赤奥', 'satellite_chase', { spd: 1, hp: 500 }), o.r1 || 'front', mk('4', '赤手前', 'satellite_chase', { spd: 1, hp: 500 }), o.r2 || 'rear'), o.seed || 1);
+    b.units[0].sp = 100;
+    if (o.before) o.before(b);
+    while (!b.log.some(e => e.actorId === 'blue-far' && e.special)) C.stepBattle(b);
+    const first = b.log.find(e => e.actorId === 'blue-far' && e.special);
+    return { b, evs: b.log.filter(e => e.castId === first.castId), t: first.tick };
+  };
+  const U = (b, id) => C.unitById(b, id);
+  // 同じseedで条件だけ変えて、青の奥の最初の通常攻撃の威力を比べる
+  const firstHit = setup => {
+    const b2 = C.createBattle(team(mk('1', '青', 'satellite_chase', { atk: 300 }), 'front', mk('2', '青2', 'satellite_chase', { spd: 1 }), 'front'),
+      team(mk('3', '赤', 'satellite_chase', { hp: 999, spd: 1 }), 'front', mk('4', '赤2', 'satellite_chase', { hp: 999, spd: 1 }), 'front'), 5);
+    if (setup) setup(b2);
+    while (!b2.log.some(e => e.actorId === 'blue-far')) C.stepBattle(b2);
+    return b2.log.find(e => e.actorId === 'blue-far').amount;
+  };
+
+  test('T40', '技の割り当て：人口1位・面積1位と、属性×高齢化率の3等分', () => {
+    const sk = n => C.ALL.find(u => u.name === n).skillId;
+    assert(sk('福岡市東区') === 'capital_aegis' && sk('熊本市東区') === 'capital_aegis', '県都（人口1位）');
+    assert(sk('八女市') === 'land_aegis' && sk('天草市') === 'land_aegis', '面積1位');
+    assert(sk('大野城市') === 'bedtown_combo' && sk('菊陽町') === 'bedtown_combo', 'ベッドタウン');
+    assert(sk('東峰村') === 'elder_snipe' && sk('五木村') === 'elder_snipe', '長老');
+    assert(sk('柳川市') === 'longevity_heal' && sk('阿蘇市') === 'forest_aegis', 'その他');
+    const out = [];
+    for (const [k, list] of Object.entries(C.ALL_BY_PREF)) {
+      const cnt = {};
+      for (const u of list) cnt[u.skillId] = (cnt[u.skillId] || 0) + 1;
+      assert(Object.keys(C.SKILLS).every(id => cnt[id] >= 1), `${C.PREFS[k].name}で使われない技がある`);
+      assert(cnt.capital_aegis === 1 && cnt.land_aegis === 1, '特別技が1つずつでない');
+      out.push(C.PREFS[k].name + ' ' + Object.keys(C.SKILLS).map(id => cnt[id]).join('/'));
+    }
+    return out.join('、');
+  });
+
+  test('T35', '政令指定都市は区単位（北九州市7区・福岡市7区・熊本市5区）、市の合計は含まない', () => {
+    const wards = city => C.ALL.filter(u => u.name.startsWith(city) && u.name.endsWith('区'));
+    assert(wards('北九州市').length === 7 && wards('福岡市').length === 7 && wards('熊本市').length === 5, '区の数');
+    assert(!C.ALL.some(u => ['北九州市', '福岡市', '熊本市'].includes(u.name)), '市の合計が残っている');
+    assert(C.ALL.filter(u => u.name.endsWith('区')).every(u => u.shape && u.kana.endsWith('く')), '区の形・読みがない');
+    const sum = c => wards(c).reduce((s, u) => s + u.population, 0);
+    return `北九州市 ${sum('北九州市').toLocaleString()}人・福岡市 ${sum('福岡市').toLocaleString()}人・熊本市 ${sum('熊本市').toLocaleString()}人`;
+  });
+
+  test('T41', '技名の終わり方で種類が分かる（攻撃「〜撃」・回復「〜の癒し」・補助「〜の加護」）', () => {
+    const end = { attack: '撃', heal: 'の癒し', support: 'の加護' };
+    for (const sk of Object.values(C.SKILLS)) assert(sk.displayName.endsWith(end[sk.kind]), sk.displayName);
+    return Object.keys(C.SKILLS).length + '種類';
+  });
+
+  test('T42', '県都の加護：味方2体の攻撃力+25%（10秒）', () => {
+    const { b, evs, t } = fire('capital_aegis');
+    assert(evs.length === 2 && evs.every(e => e.type === 'buff' && e.buff === 'atkUp'), '2体への強化でない');
+    assert(U(b, 'blue-far').buffs.atkUp === t + C.BUFF_TICKS.atkUp && U(b, 'blue-near').buffs.atkUp === t + C.BUFF_TICKS.atkUp, '効果時間');
+    const n = firstHit(), u = firstHit(b2 => { b2.units[0].buffs.atkUp = 99999; });
+    assert(Math.abs(u - Math.round(n * 1.25)) <= 1, `威力 ${n}→${u}`);
+    return `通常 ${n} → 攻撃↑ ${u}`;
+  });
+
+  test('T43', '下町の加護：味方2体の受けるダメージ−30%（8秒）', () => {
+    const { b, evs, t } = fire('downtown_aegis');
+    assert(evs.length === 2 && evs.every(e => e.buff === 'guard'), '2体への加護でない');
+    assert(U(b, 'blue-near').buffs.guard === t + C.BUFF_TICKS.guard, '効果時間');
+    const n = firstHit(), g = firstHit(b2 => b2.units.filter(u => u.side === 'red').forEach(u => { u.buffs.guard = 99999; }));
+    assert(Math.abs(g - Math.round(n * .7)) <= 1, `被ダメ ${n}→${g}`);
+    return `通常 ${n} → 加護中 ${g}`;
+  });
+
+  test('T44', '大地の加護：自分に盾30、盾がある間は受けたダメージの半分を反撃', () => {
+    const { b, evs } = fire('land_aegis', { st: { hp: 120 } });
+    assert(evs.length === 1 && evs[0].type === 'shield' && evs[0].targetId === 'blue-far' && evs[0].amount === 30, '盾30でない');
+    const me = U(b, 'blue-far');
+    assert(me.shield && me.shield.counter, '反撃の印がない');
+    b.tick++;
+    const red = U(b, 'red-far');
+    C.resolveTick(b, C.snapshotStart(b), [{ u: red, special: false, role: 'front', cast: 999, receiver: me, kind: 'damage', val: 20, skillId: 'basic', style: 'melee', label: 'テスト' }]);
+    const c = b.log.find(e => e.skillId === 'counter');
+    assert(c && c.actorId === 'blue-far' && c.targetId === 'red-far' && c.amount === 10, '反撃が違う');
+    return `反撃 ${c.amount}`;
+  });
+
+  test('T45', 'ベッドタウン連撃：敵2体に同時に攻撃（同じ技としてまとまる）', () => {
+    const { evs } = fire('bedtown_combo');
+    assert(evs.length === 2 && evs.every(e => e.type === 'damage' && e.attackStyle === 'melee'), '2体攻撃でない');
+    assert(new Set(evs.map(e => e.targetId)).size === 2, '同じ相手を2回殴った');
+    assert(evs[0].label.includes('敵2体'), '表示が「敵2体」でない');
+  });
+
+  test('T46', '衛星都市の追撃：単体攻撃のあと、相方が次のtickに行動', () => {
+    const { b, evs, t } = fire('satellite_chase');
+    assert(evs.some(e => e.type === 'damage') && evs.some(e => e.type === 'buff' && e.buff === 'chase' && e.targetId === 'blue-near'), '追撃の指示がない');
+    C.stepBattle(b);
+    assert(b.log.some(e => e.actorId === 'blue-near' && e.tick === t + 1), '相方が次のtickに動いていない');
+  });
+
+  test('T47', '子育て世代の加護：味方2体の行動ゲージ+50', () => {
+    let pre = 0;
+    const { b, evs } = fire('parenting_aegis', { before: b => { pre = b.units[1].atb; } });
+    assert(evs.length === 2 && evs.every(e => e.buff === 'atb'), '2体への加速でない');
+    assert(U(b, 'blue-near').atb >= pre + 50, `相方のゲージ ${U(b, 'blue-near').atb.toFixed(1)}`);
+  });
+
+  test('T48', '田園の癒し：味方2体を回復', () => {
+    const { b, evs } = fire('field_heal', { before: b => { b.units[0].hp = 30; b.units[1].hp = 50; } });
+    assert(evs.length === 2 && evs.every(e => e.type === 'heal' && e.amount === 18), '回復量が違う ' + evs.map(e => e.amount));
+    assert(U(b, 'blue-far').hp === 48 && U(b, 'blue-near').hp === 68, 'HPが違う');
+  });
+
+  test('T49', '長寿の癒し：自分を回復し、一度だけHP1で踏みとどまる', () => {
+    const { b, evs } = fire('longevity_heal', { before: b => { b.units[0].hp = 40; } });
+    assert(evs.some(e => e.type === 'heal' && e.amount === 20) && evs.some(e => e.buff === 'guts'), '回復または根性がない');
+    const me = U(b, 'blue-far'), red = U(b, 'red-far');
+    const lethal = () => { b.tick++; C.resolveTick(b, C.snapshotStart(b), [{ u: red, special: false, role: 'front', cast: 900 + b.tick, receiver: me, kind: 'damage', val: 999, skillId: 'basic', style: 'melee', label: 'テスト' }]); };
+    lethal();
+    assert(me.hp === 1 && b.log.some(e => e.type === 'guts'), '踏みとどまらなかった');
+    lethal();
+    assert(me.hp === 0, '2回目も踏みとどまった');
+  });
+
+  test('T50', '森の加護：味方2体に盾16', () => {
+    const { b, evs } = fire('forest_aegis');
+    assert(evs.length === 2 && evs.every(e => e.type === 'shield' && e.amount === 16), '盾が違う');
+    assert(U(b, 'blue-far').shield.amount === 16 && U(b, 'blue-near').shield.amount === 16, '盾の量');
+  });
+
+  test('T51', '山の神の雷撃：敵2体に魔法攻撃', () => {
+    const { evs } = fire('mountain_thunder');
+    assert(evs.length === 2 && evs.every(e => e.type === 'damage' && e.attackStyle === 'magic'), '2体魔法でない');
+  });
+
+  test('T52', '長老の狙撃：後衛がいれば必ず後衛を狙う', () => {
+    for (let s = 1; s <= 30; s++) {
+      const { evs } = fire('elder_snipe', { seed: s, r1: 'front', r2: 'rear' });
+      assert(evs.length === 1 && evs[0].targetId === 'red-near', `seed${s} で前衛を狙った`);
+    }
+    return '30回とも後衛';
+  });
+
+  test('T53', '補助技の温存：強化が十分残っていればSPを保持して通常攻撃', () => {
+    const { b } = fire('capital_aegis');
+    const me = U(b, 'blue-far');
+    me.sp = 100;
+    const t0 = b.tick;
+    while (!b.log.some(e => e.actorId === 'blue-far' && e.tick > t0)) C.stepBattle(b);
+    const act = b.log.find(e => e.actorId === 'blue-far' && e.tick > t0);
+    assert(act.skillId === 'basic' && me.sp === 100, '強化中なのに再使用した');
+  });
+
   // 形の一覧（目視確認用）
   const gal = document.createElement('div');
   gal.innerHTML = '<h2>形の一覧（属性・大きさ係数つき）</h2><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">' +
-    Object.values(C.ALL_BY_PREF).flat().map(u => `<div style="background:#1b2d42;border-radius:8px;padding:6px;text-align:center;font-size:12px">${C.shapeSvg(u, 'g')}<br>${C.esc(u.name)} ×${u.size}<br>${u.attr}（密度${u.densityRank}位）</div>`).join('') + '</div>';
+    Object.values(C.ALL_BY_PREF).flat().map(u => `<div style="background:#1b2d42;border-radius:8px;padding:6px;text-align:center;font-size:12px">${C.shapeSvg(u, 'g')}<br>${C.esc(u.name)} ×${u.size}<br>${u.attr}（密度${u.densityRank}位）<br>${C.SKILLS[u.skillId].displayName}</div>`).join('') + '</div>';
   document.body.appendChild(gal);
   const st = document.createElement('style');
   st.textContent = '.g{width:96px;height:96px}.g path{fill:#8acde0;stroke:#edf7ff;stroke-width:1.5;vector-effect:non-scaling-stroke}';
